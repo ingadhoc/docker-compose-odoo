@@ -1,0 +1,51 @@
+version: '2.1'
+services:
+    db:
+        image: postgres:9.6
+        environment:
+            - POSTGRES_USER=odoo
+            - POSTGRES_PASSWORD=odoo
+            - POSTGRES_DB=postgres
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        volumes:
+            - pg_data:/var/lib/postgresql/data/pgdata
+        network_mode: "bridge"
+    odoo:
+        # user: root
+        # build:
+        #     context: ./data
+        #     dockerfile: Dockerfile
+        image: $ODOO_IMAGE:$ODOO_MINOR
+        # working_dir: $WORKING_DIR
+        external_links:
+            - aeroo:aeroo
+        # si usamos network_mode entonces el depends_on no funciona, necesitamos link
+        # depends_on:
+        #     # - proxy
+        #     - db
+        links:
+            - db:db
+        volumes:
+            - ./data/custom:/home/odoo/custom
+            - default:/home/odoo/src
+            - odoo_data:/home/odoo/data
+        labels:
+            - traefik.enable=true
+            - traefik.frontend.port=8069
+            - traefik.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN
+            - traefik.frontend.priority=$TRAEFIK_FRONTEND_PRIORITY
+            # - traefik.longpolling.port=8072
+            # - traefik.longpolling.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN;PathPrefix:/longpolling/
+            - traefik.backend.loadbalancer.stickiness=true
+            - traefik.backend.loadbalancer.method=drr
+            # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
+            # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
+        env_file:
+            - .env
+        network_mode: "bridge"
+        # para, por ejemplo, odoo-saas. para que el container resuelva tmb .loc en esta ip
+        dns: 172.17.0.1
+volumes:
+    pg_data:
+    odoo_data:
+    default:
