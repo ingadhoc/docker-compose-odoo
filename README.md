@@ -1,4 +1,6 @@
-# Odoo Docker Compose and Images
+# Odoo Docker Compose
+
+This docker compose y focoused on easing development 
 
 ## Docker Images
 
