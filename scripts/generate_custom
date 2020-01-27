@@ -115,8 +115,9 @@ class GenerateCustom(object):
         os.system('echo "" && echo "STEP 4/4: Remove single branch"')
         for directory in os.listdir(self.custom_path):
             os.system('echo "" && echo "Remove single branch for repository %s"' % directory)
-            os.system('cd %s && git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"')
-            os.system('cd %s && git fetch origin')
+            os.system('cd %s && git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"' % os.path.join(
+                self.custom_path, directory))
+            os.system('cd %s && git fetch origin' % os.path.join(self.custom_path, directory))
             os.system('echo "Ready!"')
 
 
