@@ -16,7 +16,6 @@ services:
         #     context: ./data
         #     dockerfile: Dockerfile
         image: $ODOO_IMAGE:$ODOO_MINOR
-        # working_dir: $WORKING_DIR
         external_links:
             - aeroo:aeroo
         # si usamos network_mode entonces el depends_on no funciona, necesitamos link

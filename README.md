@@ -1,12 +1,12 @@
 # Odoo Docker Compose
 
-This docker compose y focoused on easing development 
+This docker compose y focoused on easing development
 
 ## Docker Images
 
 ## Odoo Docker Adhoc
 
-You can find documentation [here](https://docs.google.com/document/d/1VJW9-nA6Tsf8sFt7-19y_MjUsXMZt6kXoXYINbnBdEA/preview)
+You can find documentation [here](https://docs.google.com/document/d/1nuX99v_ncfEfXlAAYVe85k9a1JbkXBVG_39GK5GGWzg/preview)
 
 ## TODO
 
