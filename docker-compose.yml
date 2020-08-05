@@ -39,6 +39,14 @@ services:
             - traefik.backend.loadbalancer.method=drr
             # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
             # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
+        environment:
+            CUSTOM_CONFIG: |-
+                [options]
+            CUSTOM_REQUIREMTNS: |-
+                # custom pip librearies
+            CUSTOM_ENTRYPOINT: |-
+                #!/bin/bash
+                # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
         env_file:
             - .env
         network_mode: "bridge"
