@@ -47,6 +47,7 @@ services:
             CUSTOM_ENTRYPOINT: |-
                 #!/bin/bash
                 # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
+                # pip install --user --no-cache-dir pyopenssl
         env_file:
             - .env
         network_mode: "bridge"
