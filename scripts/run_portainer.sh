@@ -17,7 +17,7 @@ docker run \
   -v portainer_data:/data \
   -l traefik.port=9000 \
   -l traefik.enable=true \
-  -l traefik.frontend.rule=Host:portainer.loc \
+  -l traefik.frontend.rule=Host:portainer.localhost \
   --restart=always \
   --name="portainer" \
   $portainer_image \

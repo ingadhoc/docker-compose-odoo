@@ -11,9 +11,9 @@ docker run -d \
     -p 8080:8080 \
     -l traefik.port=8080 \
     -l traefik.enable=true \
-    -l traefik.frontend.rule=Host:traefik.loc \
+    -l traefik.frontend.rule=Host:traefik.localhost \
     -v /var/run/docker.sock:/var/run/docker.sock \
     --name="traefik" \
     --restart=always \
     $traefik_image \
-    --api --docker --docker.domain=loc --docker.exposedbydefault=false
+    --api --docker --docker.domain=localhost --docker.exposedbydefault=false
