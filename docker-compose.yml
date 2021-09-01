@@ -51,7 +51,7 @@ services:
         env_file:
             - .env
         network_mode: "bridge"
-        # para, por ejemplo, odoo-saas. para que el container resuelva tmb .loc en esta ip
+        # para, por ejemplo, odoo-saas. para que el container resuelva tmb .localhost en esta ip
         dns: 172.17.0.1
 volumes:
     pg_data:
