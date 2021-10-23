@@ -9,7 +9,16 @@ services:
             - PGDATA=/var/lib/postgresql/data/pgdata
         volumes:
             - pg_data:/var/lib/postgresql/data/pgdata
-        network_mode: "bridge"
+        networks:
+            adhoc:
+    dns:
+        image: cytopia/bind
+        environment:
+            WILDCARD_DNS: ${DOMAIN}=172.20.${ODOO_VERSION}.1
+            DNS_FORWARDER: 127.0.0.11
+        networks:
+            adhoc:
+                ipv4_address: 172.20.${ODOO_VERSION}.10
     odoo:
         # user: root
         # build:
@@ -18,12 +27,9 @@ services:
         image: $ODOO_IMAGE:$ODOO_MINOR
         external_links:
             - aeroo:aeroo
-        # si usamos network_mode entonces el depends_on no funciona, necesitamos link
-        # depends_on:
-        #     # - proxy
-        #     - db
-        links:
-            - db:db
+        depends_on:
+            - db
+            - dns
         volumes:
             - ./data/custom:/home/odoo/custom
             - default:/home/odoo/src
@@ -48,12 +54,20 @@ services:
                 #!/bin/bash
                 # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
                 # pip install --user --no-cache-dir pyopenssl
-        env_file:
-            - .env
-        network_mode: "bridge"
-        # para, por ejemplo, odoo-saas. para que el container resuelva tmb .localhost en esta ip
-        dns: 172.17.0.1
+        dns:
+            - 172.20.${ODOO_VERSION}.10
+        networks:
+            adhoc:
+
 volumes:
     pg_data:
     odoo_data:
     default:
+
+networks:
+    adhoc:
+        external: false
+        name: adhoc-${ODOO_VERSION}
+        ipam:
+            config:
+                - subnet: 172.20.${ODOO_VERSION}.0/24
