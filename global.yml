@@ -17,7 +17,29 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         restart: unless-stopped
-        network_mode: "host"
+        networks:
+            adhoc:
     aeroo:
         image: adhoc/aeroo-docs
         restart: unless-stopped
+        networks:
+            adhoc:
+
+    dns:
+        image: cytopia/bind
+        environment:
+            # otra alternativa seria agregar para cada version algo asi: odoo11.localhost=172.20.0.1,odoo12.localhost=172.20.0.1,odoo13.localhost=172.20.0.1
+            WILDCARD_DNS: "odoo.localhost=172.20.0.1"
+            DNS_FORWARDER: 127.0.0.11
+        restart: unless-stopped
+        networks:
+            adhoc:
+                ipv4_address: 172.20.0.10
+
+networks:
+    adhoc:
+        external: false
+        name: adhoc
+        ipam:
+            config:
+                - subnet: 172.20.0.0/24
