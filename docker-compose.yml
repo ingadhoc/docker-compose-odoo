@@ -14,7 +14,7 @@ services:
     dns:
         image: cytopia/bind
         environment:
-            WILDCARD_DNS: ${DOMAIN}=172.20.${ODOO_VERSION}.1
+            WILDCARD_DNS: odoo.localhost=172.20.${ODOO_VERSION}.1
             DNS_FORWARDER: 127.0.0.11
         networks:
             adhoc:
