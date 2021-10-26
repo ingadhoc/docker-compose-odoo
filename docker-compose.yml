@@ -11,6 +11,14 @@ services:
             - pg_data:/var/lib/postgresql/data/pgdata
         networks:
             adhoc:
+    dns:
+        image: cytopia/bind
+        environment:
+            WILDCARD_DNS: odoo.localhost=172.20.${ODOO_VERSION}.1
+            DNS_FORWARDER: 127.0.0.11
+        networks:
+            adhoc:
+                ipv4_address: 172.20.${ODOO_VERSION}.10
     odoo:
         # user: root
         # build:
@@ -21,6 +29,7 @@ services:
             - aeroo:aeroo
         depends_on:
             - db
+            - dns
         volumes:
             - ./data/custom:/home/odoo/custom
             - default:/home/odoo/src
@@ -48,7 +57,7 @@ services:
         env_file:
             - .env
         dns:
-            - 172.20.0.10
+            - 172.20.${ODOO_VERSION}.10
         networks:
             adhoc:
 
@@ -59,4 +68,8 @@ volumes:
 
 networks:
     adhoc:
-        external: true
+        external: false
+        name: adhoc-${ODOO_VERSION}
+        ipam:
+            config:
+                - subnet: 172.20.${ODOO_VERSION}.0/24
