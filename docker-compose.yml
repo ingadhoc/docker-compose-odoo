@@ -11,6 +11,11 @@ services:
             - pg_data:/var/lib/postgresql/data/pgdata
         networks:
             adhoc:
+    aeroo:
+        image: adhoc/aeroo-docs
+        restart: unless-stopped
+        networks:
+            adhoc:
     dns:
         image: cytopia/bind
         environment:
@@ -25,11 +30,10 @@ services:
         #     context: ./data
         #     dockerfile: Dockerfile
         image: $ODOO_IMAGE:$ODOO_MINOR
-        external_links:
-            - aeroo:aeroo
         depends_on:
             - db
             - dns
+            - aeroo
         volumes:
             - ./data/custom:/home/odoo/custom
             - default:/home/odoo/src
