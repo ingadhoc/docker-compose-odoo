@@ -5,11 +5,11 @@ services:
         command:
             - --api
             - --docker
-            - --docker.domain=localhostç
+            - --docker.domain=localhost
             - --docker.exposedbydefault=false
-        ports:
-            - 80:80
-            - 8080:8080
+        # ports:
+        #     - 80:80
+        #     - 8080:8080
         labels:
             - traefik.enable=true
             - traefik.port=8080
@@ -17,8 +17,5 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         restart: unless-stopped
-        network_mode: "host"
-    aeroo:
-        image: adhoc/aeroo-docs
-        restart: unless-stopped
+        # para que funcione la solución *.localhost
         network_mode: "host"
