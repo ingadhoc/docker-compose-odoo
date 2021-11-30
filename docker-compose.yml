@@ -16,6 +16,14 @@ services:
         restart: unless-stopped
         networks:
             adhoc:
+    mailhog:
+        image: mailhog/mailhog:latest
+        restart: always
+        ports:
+            - 1025:1025
+            - 8025:8025
+        networks:
+            adhoc:
     dns:
         image: cytopia/bind
         environment:
@@ -58,6 +66,8 @@ services:
                 #!/bin/bash
                 # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
                 # pip install --user --no-cache-dir pyopenssl
+            SMTP_SERVER: mailhog
+            SMTP_PORT: 1025
         env_file:
             - .env
         dns:
