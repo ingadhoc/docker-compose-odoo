@@ -68,8 +68,20 @@ services:
                 # pip install --user --no-cache-dir pyopenssl
             SMTP_SERVER: mailhog
             SMTP_PORT: 1025
-        env_file:
-            - .env
+            DBFILTER: ${DBFILTER}
+            SERVER_WIDE_MODULES: ${SERVER_WIDE_MODULES}
+            MAX_CRON_THREADS: ${MAX_CRON_THREADS}
+            WORKERS: ${WORKERS}
+            LIST_DB: ${LIST_DB}
+            WITHOUT_DEMO: ${WITHOUT_DEMO}
+            ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+            PROXY_MODE: ${PROXY_MODE}
+            SERVER_MODE: ${SERVER_MODE}
+            AEROO_DOCS_HOST: ${AEROO_DOCS_HOST}
+            LIMIT_TIME_REAL_CRON: ${LIMIT_TIME_REAL_CRON}
+            LIMIT_TIME_REAL: ${LIMIT_TIME_REAL}
+            UNACCENT: ${UNACCENT}
+            ODOO_UPGRADE_PATH: ${ODOO_UPGRADE_PATH}
         dns:
             - 172.20.${ODOO_VERSION}.10
         networks:
