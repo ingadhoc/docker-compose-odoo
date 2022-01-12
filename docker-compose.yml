@@ -82,6 +82,7 @@ services:
             LIMIT_TIME_REAL: ${LIMIT_TIME_REAL}
             UNACCENT: ${UNACCENT}
             ODOO_UPGRADE_PATH: ${ODOO_UPGRADE_PATH}
+            IGNORE_SRC_REPOSITORIES: ${IGNORE_SRC_REPOSITORIES}
         dns:
             - 172.20.${ODOO_VERSION}.10
         networks:
