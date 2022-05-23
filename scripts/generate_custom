@@ -22,14 +22,14 @@ class GenerateCustom(object):
         @return True or exit the program in the confirm is no.
         """
         pprint.pprint('\n... Configuration of Parameters Set')
-        for (parameter, value) in args.iteritems():
+        for (parameter, value) in args.items():
             pprint.pprint('%s = %s' % (parameter, value))
 
         question = 'Confirm the run with the above parameters?'
         answer = 'The script parameters were confirmed by the user'
         confirm_flag = False
         while confirm_flag not in ['y', 'n']:
-            confirm_flag = raw_input(question + ' [y/n]: ')
+            confirm_flag = input(question + ' [y/n]: ')
             if confirm_flag == 'y':
                 pprint.pprint(answer)
             elif confirm_flag == 'n':
