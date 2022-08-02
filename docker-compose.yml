@@ -25,9 +25,9 @@ services:
         networks:
             adhoc:
     dns:
-        image: cytopia/bind
+        image: cytopia/bind:alpine-0.30
         environment:
-            WILDCARD_DNS: odoo.localhost=172.20.${ODOO_VERSION}.1
+            DNS_A: '*.odoo.localhost=172.20.${ODOO_VERSION}.1'
             DNS_FORWARDER: 127.0.0.11
         networks:
             adhoc:
