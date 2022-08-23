@@ -19,3 +19,8 @@ You can find documentation [here](https://docs.google.com/document/d/1nuX99v_ncf
 * https://bitbucket.org/yajo/docker-odoo
 * https://github.com/oondeo/docker-odoo
 * https://github.com/allamand/docker-vscode
+
+
+### Infrastructure model
+
+![Infrastructure model](.infragenie/infrastructure_model.png)
