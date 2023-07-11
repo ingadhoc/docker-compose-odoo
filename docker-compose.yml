@@ -46,6 +46,7 @@ services:
             - ./data/custom:/home/odoo/custom
             - default:/home/odoo/src
             - odoo_data:/home/odoo/data
+            - ..:/workspaces:cached
         labels:
             - traefik.enable=true
             - traefik.frontend.port=8069
