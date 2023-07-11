@@ -88,6 +88,8 @@ services:
             - 172.20.${ODOO_VERSION}.10
         networks:
             adhoc:
+        command: /bin/sh -c "while sleep 1000; do :; done"
+
 
 volumes:
     pg_data:
