@@ -1,5 +1,43 @@
 version: '2.1'
 services:
+    locust:
+        restart: "always"
+        image: adhoc/adhoc-locust:0.1
+        #environment:
+        ports:
+            - 8089:8089
+        networks:
+            adhoc:
+        labels:
+            - traefik.enable=true
+            - traefik.frontend.port=8089
+        depends_on:
+            - dns
+        volumes:
+            - ./locust:/mnt/locust
+        command: -f /mnt/locust #--config=/mnt/locust/locust.conf #-H http://saas_provider.16.odoo.localhost --master --logfile=locustfile.log
+
+    metabase:
+        restart: "always"
+        image: metabase/metabase
+        environment:
+
+            - MB_DB_TYPE=postgres
+            - MB_DB_DBNAME=metabase
+            - MB_DB_PORT=5432
+            - MB_DB_USER=odoo
+            - MB_DB_PASS=odoo
+            - MB_DB_HOST=db
+        ports:
+            - 3000:3000
+        networks:
+            adhoc:
+        labels:
+            - traefik.enable=true
+            - traefik.frontend.port=3000
+        depends_on:
+            - db
+            - dns
     db:
         image: postgres:14
         environment:
@@ -92,6 +130,7 @@ volumes:
     pg_data:
     odoo_data:
     default:
+    locust_data:
 
 networks:
     adhoc:
