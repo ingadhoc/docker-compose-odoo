@@ -1,102 +1,102 @@
-version: '2.1'
+version: "3.5"
 services:
-    db:
-        image: postgres:14
-        environment:
-            - POSTGRES_USER=odoo
-            - POSTGRES_PASSWORD=odoo
-            - POSTGRES_DB=postgres
-            - PGDATA=/var/lib/postgresql/data/pgdata
-        volumes:
-            - pg_data:/var/lib/postgresql/data/pgdata
-        networks:
-            adhoc:
-    aeroo:
-        image: adhoc/aeroo-docs
-        restart: unless-stopped
-        networks:
-            adhoc:
-    mailhog:
-        image: mailhog/mailhog:latest
-        restart: always
-        ports:
-            - 1025:1025
-            - 8025:8025
-        networks:
-            adhoc:
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_DB=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data/pgdata
+    networks:
+      adhoc:
+  aeroo:
+    image: adhoc/aeroo-docs
+    restart: unless-stopped
+    networks:
+      adhoc:
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: always
+    ports:
+      - 1025:1025
+      - 8025:8025
+    networks:
+      adhoc:
+  dns:
+    image: cytopia/bind:alpine-0.30
+    environment:
+      DNS_A: "*.odoo.localhost=172.20.${ODOO_VERSION}.1"
+      DNS_FORWARDER: 127.0.0.11
+    networks:
+      adhoc:
+        ipv4_address: 172.20.${ODOO_VERSION}.10
+  odoo:
+    # user: root
+    # build:
+    #     context: ./data
+    #     dockerfile: Dockerfile
+    image: $ODOO_IMAGE:$ODOO_MINOR
+    depends_on:
+      - db
+      - dns
+      - aeroo
+    volumes:
+      - ./data/custom:/home/odoo/custom
+      - default:/home/odoo/src
+      - odoo_data:/home/odoo/data
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.port=8069
+      - traefik.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN
+      # - traefik.frontend.priority=10
+      # - traefik.longpolling.port=8072
+      # - traefik.longpolling.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN;PathPrefix:/longpolling/
+      - traefik.backend.loadbalancer.stickiness=true
+      - traefik.backend.loadbalancer.method=drr
+      # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
+      # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
+    environment:
+      CUSTOM_CONFIG: |-
+        [options]
+      CUSTOM_REQUIREMTNS: |-
+        # custom pip librearies
+      CUSTOM_ENTRYPOINT: |-
+        #!/bin/bash
+        # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
+        # pip install --user --no-cache-dir pyopenssl
+      SMTP_SERVER: mailhog
+      SMTP_PORT: 1025
+      DBFILTER: ${DBFILTER}
+      SERVER_WIDE_MODULES: ${SERVER_WIDE_MODULES}
+      MAX_CRON_THREADS: ${MAX_CRON_THREADS}
+      WORKERS: ${WORKERS}
+      LIST_DB: ${LIST_DB}
+      WITHOUT_DEMO: ${WITHOUT_DEMO}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      PROXY_MODE: ${PROXY_MODE}
+      SERVER_MODE: ${SERVER_MODE}
+      AEROO_DOCS_HOST: ${AEROO_DOCS_HOST}
+      LIMIT_TIME_REAL_CRON: ${LIMIT_TIME_REAL_CRON}
+      LIMIT_TIME_REAL: ${LIMIT_TIME_REAL}
+      UNACCENT: ${UNACCENT}
+      ODOO_UPGRADE_PATH: ${ODOO_UPGRADE_PATH}
+      IGNORE_SRC_REPOSITORIES: ${IGNORE_SRC_REPOSITORIES}
     dns:
-        image: cytopia/bind:alpine-0.30
-        environment:
-            DNS_A: '*.odoo.localhost=172.20.${ODOO_VERSION}.1'
-            DNS_FORWARDER: 127.0.0.11
-        networks:
-            adhoc:
-                ipv4_address: 172.20.${ODOO_VERSION}.10
-    odoo:
-        # user: root
-        # build:
-        #     context: ./data
-        #     dockerfile: Dockerfile
-        image: $ODOO_IMAGE:$ODOO_MINOR
-        depends_on:
-            - db
-            - dns
-            - aeroo
-        volumes:
-            - ./data/custom:/home/odoo/custom
-            - default:/home/odoo/src
-            - odoo_data:/home/odoo/data
-        labels:
-            - traefik.enable=true
-            - traefik.frontend.port=8069
-            - traefik.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN
-            # - traefik.frontend.priority=10
-            # - traefik.longpolling.port=8072
-            # - traefik.longpolling.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN;PathPrefix:/longpolling/
-            - traefik.backend.loadbalancer.stickiness=true
-            - traefik.backend.loadbalancer.method=drr
-            # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
-            # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
-        environment:
-            CUSTOM_CONFIG: |-
-                [options]
-            CUSTOM_REQUIREMTNS: |-
-                # custom pip librearies
-            CUSTOM_ENTRYPOINT: |-
-                #!/bin/bash
-                # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
-                # pip install --user --no-cache-dir pyopenssl
-            SMTP_SERVER: mailhog
-            SMTP_PORT: 1025
-            DBFILTER: ${DBFILTER}
-            SERVER_WIDE_MODULES: ${SERVER_WIDE_MODULES}
-            MAX_CRON_THREADS: ${MAX_CRON_THREADS}
-            WORKERS: ${WORKERS}
-            LIST_DB: ${LIST_DB}
-            WITHOUT_DEMO: ${WITHOUT_DEMO}
-            ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-            PROXY_MODE: ${PROXY_MODE}
-            SERVER_MODE: ${SERVER_MODE}
-            AEROO_DOCS_HOST: ${AEROO_DOCS_HOST}
-            LIMIT_TIME_REAL_CRON: ${LIMIT_TIME_REAL_CRON}
-            LIMIT_TIME_REAL: ${LIMIT_TIME_REAL}
-            UNACCENT: ${UNACCENT}
-            ODOO_UPGRADE_PATH: ${ODOO_UPGRADE_PATH}
-            IGNORE_SRC_REPOSITORIES: ${IGNORE_SRC_REPOSITORIES}
-        dns:
-            - 172.20.${ODOO_VERSION}.10
-        networks:
-            adhoc:
+      - 172.20.${ODOO_VERSION}.10
+    networks:
+      adhoc:
 
 volumes:
-    pg_data:
-    odoo_data:
-    default:
+  pg_data:
+  odoo_data:
+  default:
 
 networks:
-    adhoc:
-        external: false
-        name: adhoc-${ODOO_VERSION}
-        ipam:
-            config:
-                - subnet: 172.20.${ODOO_VERSION}.0/24
+  adhoc:
+    external: false
+    name: adhoc-${ODOO_VERSION}
+    ipam:
+      config:
+        - subnet: 172.20.${ODOO_VERSION}.0/24
