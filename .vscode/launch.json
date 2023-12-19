@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python:Odoo",
+        "type": "python",
+        "request": "launch",
+        "stopOnEntry": false,
+        "python": "${command:python.interpreterPath}",
+        "console": "integratedTerminal",
+        "program": "/home/odoo/.local/bin/odoo",
+        "args": ["-d 34331"],
+        "cwd": "${workspaceRoot}"
+      }
+    ]
+  }
+  
