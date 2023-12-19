@@ -39,24 +39,18 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "eamodio.gitlens",
         "ms-python.flake8",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-vscode-remote.remote-wsl",
-        // requiere login
-        // "tabnine.tabnine-vscode",
         "formulahendry.auto-close-tag",
         "hookyqr.beautify",
         "usernamehw.errorlens",
-        "eamodio.gitlens",
         "ionutvmi.path-autocomplete",
-        "ms-vsliveshare.vsliveshare",
         "ms-vscode.sublime-keybindings",
         "shardulm94.trailing-spaces",
         "dotjoshjohnson.xml",
-        "redhat.vscode-yaml",
-        "zoma.vscode-auto-open-workspace"
+        "zoma.vscode-auto-open-workspace",
+        "trinhanhngoc.vscode-odoo"
       ]
     }
   }
