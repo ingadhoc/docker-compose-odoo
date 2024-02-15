@@ -11,19 +11,19 @@ services:
       - pg_data:/var/lib/postgresql/data/pgdata
     networks:
       adhoc:
-  aeroo:
-    image: adhoc/aeroo-docs
-    restart: unless-stopped
-    networks:
-      adhoc:
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: always
-    ports:
-      - 1025:1025
-      - 8025:8025
-    networks:
-      adhoc:
+  # aeroo:
+  #   image: adhoc/aeroo-docs
+  #   restart: unless-stopped
+  #   networks:
+  #     adhoc:
+  # mailhog:
+  #   image: mailhog/mailhog:latest
+  #   restart: always
+  #   ports:
+  #     - 1025:1025
+  #     - 8025:8025
+  #   networks:
+  #     adhoc:
   dns:
     image: cytopia/bind:alpine-0.30
     environment:
@@ -41,7 +41,7 @@ services:
     depends_on:
       - db
       - dns
-      - aeroo
+      # - aeroo
     volumes:
       - ./data/custom:/home/odoo/custom
       - default:/home/odoo/src
