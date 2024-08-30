@@ -1,21 +1,27 @@
-version: "3.5"
 services:
+
   db:
+    container_name: db-${ODOO_VERSION}
     image: postgres:15
     environment:
       - POSTGRES_USER=odoo
       - POSTGRES_PASSWORD=odoo
       - POSTGRES_DB=postgres
       - PGDATA=/var/lib/postgresql/data/pgdata
+    command:
+      - -p 54${ODOO_VERSION}
     volumes:
       - pg_data:/var/lib/postgresql/data/pgdata
     networks:
       adhoc:
+        ipv4_address: 172.20.${ODOO_VERSION}.110
+
   aeroo:
     image: adhoc/aeroo-docs
     restart: unless-stopped
     networks:
       adhoc:
+
   mailhog:
     image: mailhog/mailhog:latest
     restart: always
@@ -24,20 +30,23 @@ services:
       - 8025:8025
     networks:
       adhoc:
+
   dns:
     image: cytopia/bind:alpine-0.30
     environment:
-      DNS_A: "*.odoo.localhost=172.20.${ODOO_VERSION}.1"
+      DNS_A: "*.localhost=172.20.0.1"
       DNS_FORWARDER: 127.0.0.11
     networks:
       adhoc:
         ipv4_address: 172.20.${ODOO_VERSION}.10
+
   odoo:
     # user: root
     # build:
     #     context: ./data
     #     dockerfile: Dockerfile
     image: $ODOO_IMAGE:$ODOO_MINOR
+    container_name: odoo-${ODOO_VERSION}
     depends_on:
       - db
       - dns
@@ -48,15 +57,15 @@ services:
       - odoo_data:/home/odoo/data
     labels:
       - traefik.enable=true
-      - traefik.frontend.port=8069
-      - traefik.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN
-      # - traefik.frontend.priority=10
-      # - traefik.longpolling.port=8072
-      # - traefik.longpolling.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN;PathPrefix:/longpolling/
-      - traefik.backend.loadbalancer.stickiness=true
-      - traefik.backend.loadbalancer.method=drr
-      # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
-      # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
+      - traefik.docker.network=adhoc
+      - traefik.http.services.odoo-${ODOO_VERSION}.loadbalancer.server.port=8069
+      - traefik.http.routers.odoo-${ODOO_VERSION}.service=odoo-${ODOO_VERSION}
+      - traefik.http.routers.odoo-${ODOO_VERSION}.entrypoints=web
+      - traefik.http.routers.odoo-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`)
+      - traefik.http.services.long-${ODOO_VERSION}.loadbalancer.server.port=8072
+      - traefik.http.routers.long-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))
+      - traefik.http.routers.long-${ODOO_VERSION}.entrypoints=web
+      - traefik.http.routers.long-${ODOO_VERSION}.service=long-${ODOO_VERSION}
     environment:
       CUSTOM_CONFIG: |-
         [options]
@@ -66,6 +75,8 @@ services:
         #!/bin/bash
         # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
         # pip install --user --no-cache-dir pyopenssl
+      PGHOST: db-${ODOO_VERSION}
+      PGPORT: 54${ODOO_VERSION}
       SMTP_SERVER: mailhog
       SMTP_PORT: 1025
       DBFILTER: ${DBFILTER}
@@ -87,6 +98,7 @@ services:
       - 172.20.${ODOO_VERSION}.10
     networks:
       adhoc:
+        ipv4_address: 172.20.${ODOO_VERSION}.100
 
 volumes:
   pg_data:
@@ -95,8 +107,5 @@ volumes:
 
 networks:
   adhoc:
-    external: false
-    name: adhoc-${ODOO_VERSION}
-    ipam:
-      config:
-        - subnet: 172.20.${ODOO_VERSION}.0/24
+    name: adhoc
+    external: true
