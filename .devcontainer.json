@@ -55,7 +55,10 @@
         "ms-vscode.sublime-keybindings",
         "shardulm94.trailing-spaces",
         "dotjoshjohnson.xml",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "njpwerner.autodocstring",
+        "streetsidesoftware.code-spell-checker",
+        "ms-python.debugpy"
       ]
     }
   }
