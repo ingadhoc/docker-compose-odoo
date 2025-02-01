@@ -30,7 +30,7 @@
   // "runServices": [],
 
   // Uncomment the next line if you want to keep your containers running after VS Code shuts down.
-  "shutdownAction": "none",
+  "shutdownAction": "stopCompose",
 
   // Uncomment the next line to run commands after the container is created.
   // "postCreateCommand": "cat /etc/os-release",
@@ -38,6 +38,21 @@
   // Configure tool-specific properties.
   "customizations": {
     "vscode": {
+      "remoteUser": "odoo",
+      "settings":{
+        "files.exclude": {
+            ".devcontainer": true,
+            //".vscode": true,
+            ".github": true,
+			      "*.Dockerfile.dockerignore": true
+        },
+        "search.exclude":{
+			    ".devcontainer": true,
+          "dockerfiles": true,
+          // ".vscode": true,
+          ".github": true
+        }
+      },
       "extensions": [
         "eamodio.gitlens",
         "ms-python.flake8",
@@ -47,7 +62,6 @@
         // requiere login
         // "tabnine.tabnine-vscode",
         "formulahendry.auto-close-tag",
-        "hookyqr.beautify",
         "usernamehw.errorlens",
         "eamodio.gitlens",
         "ionutvmi.path-autocomplete",

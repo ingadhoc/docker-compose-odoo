@@ -1,3 +1,4 @@
 data/custom/repositories/*
 data/custom/*
 data/default
+tmp/*
