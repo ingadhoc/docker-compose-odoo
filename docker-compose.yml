@@ -86,6 +86,7 @@ services:
       ODOOLY_SSL_UNVERIFIED: "True"
       LIMIT_MEMORY_SOFT: "3147484000"
       LIMIT_MEMORY_HARD: "4777721600"
+      WAIT_PG: "false"
     dns:
       - "8.8.8.8"
       - 172.20.${ODOO_VERSION}.10
