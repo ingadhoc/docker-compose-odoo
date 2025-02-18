@@ -19,6 +19,11 @@
   // 	{"source":"/home/odoo/custom/repositories","/repositories","type":"bind"},
   // 	{"source":"/home/odoo/src/odoo","/odoo","type":"bind"},
   // ],
+  "mounts": [
+    {
+      "source": "./.devcontainer/scripts", "target": "/scripts", "type": "bind"
+    }
+  ],
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
@@ -33,7 +38,7 @@
   "shutdownAction": "stopCompose",
 
   // Uncomment the next line to run commands after the container is created.
-  // "postCreateCommand": "cat /etc/os-release",
+  "postCreateCommand": "/scripts/poststart.sh",
 
   // Configure tool-specific properties.
   "customizations": {
