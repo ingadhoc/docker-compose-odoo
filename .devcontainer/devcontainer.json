@@ -45,6 +45,7 @@
     "vscode": {
       "remoteUser": "odoo",
       "settings":{
+        "remote.autoForwardPorts": false,
         "files.exclude": {
             ".devcontainer": true,
             //".vscode": true,
@@ -56,11 +57,27 @@
           "dockerfiles": true,
           // ".vscode": true,
           ".github": true
-        }
+        },
+        "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
+        "python.analysis.extraPaths": [
+            "/home/odoo/src/odoo",
+            "/home/odoo/src/enterprise",
+            "/home/odoo/src/odoo-module-migrator",
+            "/home/odoo/src/odoo-upgrade",
+            "/home/odoo/src/odooly",
+            "/home/odoo/src/openupgradelib",
+            "/home/odoo/src/upgrade-util"
+        ],
+        "cSpell.diagnosticLevel": "Hint",
+        "cSpell.diagnosticLevelFlaggedWords":   "Hint",
+        "flake8.args": [
+          "--max-line-length=120",
+          "--ignore=E402,F841,F401,E302,E305"
+        ]
       },
       "extensions": [
         "eamodio.gitlens",
-        "ms-python.flake8",
+        // "ms-python.flake8",
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-vscode-remote.remote-wsl",
