@@ -2,18 +2,16 @@
   "name": "Odoo Adhoc",
   "dockerComposeFile": ["../docker-compose.yml"],
   "service": "odoo",
-
-  "workspaceFolder": "/workspace",
+  // "workspaceFolder": "/workspace",
+  "workspaceFolder": "/home/odoo/custom/repositories",
   "mounts": [
     {
       "source": "${localWorkspaceFolder}/.devcontainer/scripts", "target": "/scripts", "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/.devcontainer/workspace", "target": "/workspace", "type": "bind"
-    },
-    {
-      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/workspace/.vscode", "type": "bind"
+      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/custom/repositories/.vscode", "type": "bind"
     }
+    // ,"source=${env:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
   ],
 
   // Features to add to the dev container. More info: https://containers.dev/features.
@@ -28,9 +26,12 @@
     "vscode": {
       "remoteUser": "odoo",
       "settings":{
+        "terminal.integrated.cwd": "/home/odoo/custom/repositories",
         "remote.autoForwardPorts": false,
+        // Ignore files in src directory the workspace
         "files.watcherExclude": {
-          "/home/odoo/src/**" : true
+          "/home/odoo/src/**" : true,
+          "/home/odoo/custom/repositories/src/**" : true
         },
         "files.exclude": {
             ".devcontainer": true,
@@ -44,7 +45,15 @@
           // ".vscode": true,
           ".github": true
         },
+        // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
+
+        // Linting (ruff)
+        "python.linting.enabled": true,
+        "python.linting.ruffEnabled": true,
+        // PyLance
+        "python.languageServer": "Pylance",
+        "python.languageServerMode": "full",
         "python.analysis.extraPaths": [
             "/home/odoo/src/odoo",
             "/home/odoo/src/enterprise",
@@ -54,27 +63,41 @@
             "/home/odoo/src/openupgradelib",
             "/home/odoo/src/upgrade-util"
         ],
+        // "python.linting.pylintArgs":[],
+        "python.analysis.exclude": [
+          // "**"
+          "/workspace/src/**",
+          "/home/odoo/custom/repositories/src/**"
+        ],
+        "python.analysis.autoSearchPaths": true,
+        "python.analysis.diagnosticMode": "openFilesOnly",
+        "python.analysis.indexing": true,
+        "python.analysis.userFileIndexingLimit": -1,
+        // Spell check
         "cSpell.diagnosticLevel": "Hint",
-        "cSpell.diagnosticLevelFlaggedWords":   "Hint"
+        "cSpell.diagnosticLevelFlaggedWords":   "Hint",
+        // General Settings
+        "[python]": {
+          // Formatter
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
       },
+      //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
       "extensions": [
-        // Python
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-vscode-remote.remote-wsl",
         "ms-python.debugpy",
-        // Web development extensions
-        // "formulahendry.auto-close-tag",
-        // "ionutvmi.path-autocomplete",
-        // "dotjoshjohnson.xml",
-        // Others
-        // "ms-vscode.sublime-keybindings",
+        "ms-python.flake8",
+        "charliermarsh.ruff",
         "eamodio.gitlens",
         "usernamehw.errorlens",
         "ms-vsliveshare.vsliveshare",
         "shardulm94.trailing-spaces",
-        // "redhat.vscode-yaml",
-        // "njpwerner.autodocstring",
         "streetsidesoftware.code-spell-checker"
       ]
     }

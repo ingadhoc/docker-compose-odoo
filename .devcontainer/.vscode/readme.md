@@ -4,13 +4,9 @@ We gitignore .devcontainer/.vscode/settings.json to allow you to test and add yo
 
 examples of settings.json
 
-```json
-{
-    
-}
-```
-
 Pylance settings
+
+[+info](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)
 
 ```json
 {
