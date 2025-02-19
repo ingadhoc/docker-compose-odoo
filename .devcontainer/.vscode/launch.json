@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "Python:Odoo",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${command:python.interpreterPath}",
+            // "python": "/home/odoo/venv/bin/python",
+            "console":"integratedTerminal",
+            // "program": "/home/odoo/.local/bin/odoo",
+            "program": "/home/odoo/venv/bin/odoo",
+            "args": [
+               "-d", "saas",
+               // "-u", "saas_container,saas_k8s,saas_provider",
+               // "-i", "módulo a instalar"
+               // "--test-tags", "/product_pack", "--stop-after-init" //Para correr los test
+               // "--dev=all",
+               // "--dev=xml",
+               // "--dev=qweb",
+            ],
+            "env": {
+                "ODOOLY_SSL_UNVERIFIED": "true",
+            }
+
+        }
+    ]
+}

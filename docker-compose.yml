@@ -44,7 +44,7 @@ services:
       # - aeroo
     volumes:
       - ./data/custom:/home/odoo/custom
-      - default:/home/odoo/src
+      # - default:/home/odoo/src
       - odoo_data:/home/odoo/data
     labels:
       - traefik.enable=true

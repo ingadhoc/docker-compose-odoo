@@ -2,3 +2,6 @@ data/custom/repositories/*
 data/custom/*
 data/default
 tmp/*
+.devcontainer/.vscode/settings.json
+.devcontainer/workspace/*
+!.devcontainer/workspace/.gitkeep
