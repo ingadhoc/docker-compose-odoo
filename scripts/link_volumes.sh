@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # change permissions so we can edit container files from host
 # TODO chequear bien cual tenemos que dar
 # chmod -R g+rw volumes/
@@ -10,3 +11,6 @@ docker_compose_project=${docker_compose_project//.}
 rm data/default 2> /dev/null
 # creamos enlace
 ln -s  /var/lib/docker/volumes/${docker_compose_project}_default/_data data/default
+
+# change permissions so we can edit container files from host
+sudo setfacl -R -m u:$USER:rwx /var/lib/docker/volumes/

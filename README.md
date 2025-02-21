@@ -1,21 +1,45 @@
 # Odoo Docker Compose
 
-This docker compose y focoused on easing development
-
-## Docker Images
+devcointainer focoused on easing development
 
 ## Odoo Docker Adhoc
 
 You can find documentation [here](https://docs.google.com/document/d/1nuX99v_ncfEfXlAAYVe85k9a1JbkXBVG_39GK5GGWzg/preview)
 
-## TODO
+## Context
 
-* Montar todo el home para tener acceso facil a odoo, el conf y algunas otras cosas?
+This must run with "developer context project" [docker-compose-context](git@github.com:ingadhoc/docker-compose-context.git)
 
+```sh
+cd ~/odoo
+git clone git@github.com:ingadhoc/docker-compose-context.git ctx
+cd ctx
+./init.sh
+```
 
-## Inspired by
+## Start devcontainer
 
-* https://bitbucket.org/xcgd/odoo
-* https://bitbucket.org/yajo/docker-odoo
-* https://github.com/oondeo/docker-odoo
-* https://github.com/allamand/docker-vscode
+```sh
+devcontainer open ~/odoo/18
+```
+
+## Odoo source code
+
+Inside the devcontainer you have available a "src" folder that is a link to src folder inside the container.
+
+if you want to use this folder outside the container you need:
+
+- uncoment the volume
+
+```yaml
+services:
+  odoo:
+    volumes:
+      # - default:/home/odoo/src
+```
+
+- fix permissions
+
+```sh
+~/odoo/18/ $: ./scripts/link_volumes.sh
+```

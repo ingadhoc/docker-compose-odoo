@@ -3,6 +3,7 @@
 # Fix addons paths
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
+        [[ $dir == .* || $dir == src* ]] && continue
         for module in "$app/"*; do
             if [[ -d $module ]]; then
                 module_name=$(basename $module)

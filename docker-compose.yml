@@ -1,62 +1,25 @@
 services:
-  db:
-    image: postgres:16
-    environment:
-      - POSTGRES_USER=odoo
-      - POSTGRES_PASSWORD=odoo
-      - POSTGRES_DB=postgres
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - pg_data:/var/lib/postgresql/data/pgdata
-    networks:
-      adhoc:
-  aeroo:
-    image: adhoc/aeroo-docs:9.5
-    restart: on-failure
-    networks:
-      adhoc:
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: on-failure
-    # ports:
-    #   - 1025:1025
-    #   - 8025:8025
-    networks:
-      adhoc:
-  dns:
-    image: cytopia/bind:alpine-0.30
-    environment:
-      DNS_A: "*.odoo.localhost=172.20.${ODOO_VERSION}.1"
-      DNS_FORWARDER: 127.0.0.11
-    networks:
-      adhoc:
-        ipv4_address: 172.20.${ODOO_VERSION}.10
   odoo:
-    # user: root
-    # build:
-    #     context: ./data
-    #     dockerfile: Dockerfile
     image: $ODOO_IMAGE:$ODOO_MINOR
     command: sleep infinity
-    depends_on:
-      - db
-      - dns
-      # - aeroo
+    container_name: odoo-${ODOO_VERSION}
     volumes:
       - ./data/custom:/home/odoo/custom
-      # - default:/home/odoo/src
+      - default:/home/odoo/src
       - odoo_data:/home/odoo/data
     labels:
       - traefik.enable=true
-      - traefik.frontend.port=8069
-      - traefik.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN
-      # - traefik.frontend.priority=10
-      # - traefik.longpolling.port=8072
-      # - traefik.longpolling.frontend.rule=HostRegexp:$DOMAIN,{subdomain:[a-z0-9-_]+}.$DOMAIN;PathPrefix:/longpolling/
-      - traefik.backend.loadbalancer.stickiness=true
-      - traefik.backend.loadbalancer.method=drr
-      # traefik.frontend.redirect.regex: $strTraefikRedirectRegex
-      # traefik.frontend.redirect.replacement: $strTraefikRedirectReplacement
+      - traefik.docker.network=adhoc
+      - traefik.http.services.odoo-${ODOO_VERSION}.loadbalancer.server.port=8069
+      - traefik.http.routers.odoo-${ODOO_VERSION}.service=odoo-${ODOO_VERSION}
+      - traefik.http.routers.odoo-${ODOO_VERSION}.entrypoints=web
+      - traefik.http.routers.odoo-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`)
+      # solo activar si se va a trabajar con workers (workers != 0)
+      # longpolling / websocket
+      # - traefik.http.services.long-${ODOO_VERSION}.loadbalancer.server.port=8072
+      # - traefik.http.routers.long-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))
+      # - traefik.http.routers.long-${ODOO_VERSION}.entrypoints=web
+      # - traefik.http.routers.long-${ODOO_VERSION}.service=long-${ODOO_VERSION}
     environment:
       CUSTOM_CONFIG: |-
         [options]
@@ -88,8 +51,8 @@ services:
       LIMIT_MEMORY_HARD: "4777721600"
       WAIT_PG: "false"
     dns:
-      - "8.8.8.8"
-      - 172.20.${ODOO_VERSION}.10
+      # - "8.8.8.8"
+      - "172.60.0.10"
     networks:
       adhoc:
       minikube:
@@ -101,11 +64,8 @@ volumes:
 
 networks:
   adhoc:
-    external: false
-    name: adhoc-${ODOO_VERSION}
-    ipam:
-      config:
-        - subnet: 172.20.${ODOO_VERSION}.0/24
+    name: adhoc
+    external: true
   minikube:
     name: minikube
     external: true

@@ -26,6 +26,7 @@
     "vscode": {
       "remoteUser": "odoo",
       "settings":{
+        "files.insertFinalNewline": true,
         "terminal.integrated.cwd": "/home/odoo/custom/repositories",
         "remote.autoForwardPorts": false,
         // Ignore files in src directory the workspace
@@ -76,6 +77,9 @@
         // Spell check
         "cSpell.diagnosticLevel": "Hint",
         "cSpell.diagnosticLevelFlaggedWords":   "Hint",
+        // Trailing spaces
+        "trailing-spaces.highlightCurrentLine": false,
+        "trailing-spaces.syntaxIgnore": ["markdown"],
         // General Settings
         "[python]": {
           // Formatter
