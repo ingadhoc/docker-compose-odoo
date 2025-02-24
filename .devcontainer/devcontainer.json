@@ -83,7 +83,7 @@
         // General Settings
         "[python]": {
           // Formatter
-          "editor.formatOnSave": false,
+          "editor.formatOnSave": true,
           "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.codeActionsOnSave": {
             "source.fixAll": "explicit",
@@ -96,7 +96,6 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
-        "ms-python.flake8",
         "charliermarsh.ruff",
         "eamodio.gitlens",
         "usernamehw.errorlens",
