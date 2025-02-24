@@ -83,7 +83,7 @@
         // General Settings
         "[python]": {
           // Formatter
-          "editor.formatOnSave": true,
+          "editor.formatOnSave": false,
           "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.codeActionsOnSave": {
             "source.fixAll": "explicit",
