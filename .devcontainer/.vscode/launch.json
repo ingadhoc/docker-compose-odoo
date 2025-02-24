@@ -10,8 +10,8 @@
             // "program": "/home/odoo/.local/bin/odoo",
             "program": "/home/odoo/venv/bin/odoo",
             "args": [
-               "-d", "saas",
-               // "-u", "saas_container,saas_k8s,saas_provider",
+               // "-d", "base a iniciar",
+               // "-u", "módulo a actualizar",
                // "-i", "módulo a instalar"
                // "--test-tags", "/product_pack", "--stop-after-init" //Para correr los test
                // "--dev=all",

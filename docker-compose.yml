@@ -58,7 +58,6 @@ services:
       minikube:
 
 volumes:
-  pg_data:
   odoo_data:
   default:
 

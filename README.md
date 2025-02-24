@@ -29,7 +29,7 @@ Inside the devcontainer you have available a "src" folder that is a link to src 
 
 if you want to use this folder outside the container you need:
 
-- uncoment the volume
+- uncomment the volume (file: docker-compose.yaml)
 
 ```yaml
 services:
