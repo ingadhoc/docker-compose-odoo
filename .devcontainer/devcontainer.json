@@ -20,6 +20,9 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": "/scripts/poststart.sh",
   "onCreateCommand": "/scripts/oncreate.sh",
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/scripts/user"
+  },
 
   // Configure tool-specific properties.
   "customizations": {
