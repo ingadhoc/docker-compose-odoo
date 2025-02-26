@@ -18,8 +18,8 @@
   // "features": {},
 
   "shutdownAction": "stopCompose",
-  "postCreateCommand": "/scripts/poststart.sh",
-  "onCreateCommand": "/scripts/oncreate.sh",
+  "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
+  "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user"
   },

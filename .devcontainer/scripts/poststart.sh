@@ -19,3 +19,5 @@ for app in "/home/odoo/custom/repositories/"*; do
         done
     fi
 done
+
+exit

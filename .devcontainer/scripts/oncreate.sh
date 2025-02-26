@@ -1,3 +1,7 @@
 #!/bin/bash
 
-ln -sf /home/odoo/src/ /home/odoo/custom/repositories/src
+if [ ! -L /home/odoo/custom/repositories/src ]; then
+    ln -sf /home/odoo/src/ /home/odoo/custom/repositories/src
+fi
+
+exit
