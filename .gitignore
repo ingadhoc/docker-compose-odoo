@@ -1,6 +1,7 @@
 data/custom/repositories/*
 data/custom/*
 data/default
+!data/custom/repositories/pyproject.toml
 tmp/*
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*

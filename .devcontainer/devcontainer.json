@@ -51,10 +51,19 @@
         },
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
-
         // Linting (ruff)
         "python.linting.enabled": true,
         "python.linting.ruffEnabled": true,
+        // Default Ruff config
+        "ruff.exclude": [
+          "/home/odoo/src/**"
+        ],
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit"
+        },
         // PyLance
         "python.languageServer": "Pylance",
         "python.languageServerMode": "full",
@@ -81,18 +90,20 @@
         "cSpell.diagnosticLevel": "Hint",
         "cSpell.diagnosticLevelFlaggedWords":   "Hint",
         // Trailing spaces
-        "trailing-spaces.highlightCurrentLine": false,
+        "trailing-spaces.highlightCurrentLine": true,
         "trailing-spaces.syntaxIgnore": ["markdown"],
-        // General Settings
-        "[python]": {
-          // Formatter
-          "editor.formatOnSave": true,
-          "editor.defaultFormatter": "charliermarsh.ruff",
-          "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-          }
-        }
+        // Debugger
+        "debug.toolBarLocation": "commandCenter",
+        "debug.openDebug": "neverOpen",
+        "debug.openExplorerOnEnd": true,
+        "debug.allowBreakpointsEverywhere": true,
+        "debug.hideLauncherWhileDebugging": true,
+        "debugpy.showPythonInlineValues": true,
+        // "debugpy.debugJustMyCode": false # We don't want this
+        // Auto Docstring
+        "autoDocstring.guessTypes": true,
+        "autoDocstring.docstringFormat": "google",
+        "autoDocstring.generateDocstringOnEnter": true
       },
       //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
       "extensions": [
@@ -104,7 +115,8 @@
         "usernamehw.errorlens",
         "ms-vsliveshare.vsliveshare",
         "shardulm94.trailing-spaces",
-        "streetsidesoftware.code-spell-checker"
+        "streetsidesoftware.code-spell-checker",
+        "njpwerner.autodocstring"
       ]
     }
   }

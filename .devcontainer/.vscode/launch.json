@@ -18,10 +18,12 @@
                // "--dev=xml",
                // "--dev=qweb",
             ],
+            "cwd": "${workspaceFolder}",
+            // "redirectOutput": true,
+            // "justMyCode": false, // we don't want to debug this, this disable the debug of our code
             "env": {
                 "ODOOLY_SSL_UNVERIFIED": "true",
             }
-
         }
     ]
 }

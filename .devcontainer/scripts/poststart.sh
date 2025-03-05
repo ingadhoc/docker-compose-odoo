@@ -4,7 +4,7 @@
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
         app_name=$(basename $app)
-        [[ $app_name == .* || $app_name == src* ]] && continue
+        [[ $app_name == .* || $app_name == src* || $app_name == tmp* ]] && continue
         echo "App: $app_name"
         for module in "$app/"*; do
             if [[ -d $module ]]; then
