@@ -13,4 +13,4 @@ rm data/default 2> /dev/null
 ln -s  /var/lib/docker/volumes/${docker_compose_project}_default/_data data/default
 
 # change permissions so we can edit container files from host
-sudo setfacl -R -m u:$USER:rwx /var/lib/docker/volumes/
+# sudo setfacl -R -d -m u:$USER:rw-x /var/lib/docker/volumes/
