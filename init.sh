@@ -10,3 +10,5 @@ rm -f data/default 2> /dev/null
 ln -s  /var/lib/docker/volumes/${ODOO_V}_default/_data data/default
 
 # sudo setfacl -R -d -m u:$USER:rw-x /var/lib/docker/volumes/
+source ./.env
+docker pull ${ODOO_IMAGE}:${ODOO_MINOR}

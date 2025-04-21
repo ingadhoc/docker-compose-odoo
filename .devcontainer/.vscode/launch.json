@@ -4,10 +4,8 @@
             "name": "Python:Odoo",
             "type": "debugpy",
             "request": "launch",
-            "python": "${command:python.interpreterPath}",
-            // "python": "/home/odoo/venv/bin/python",
+            "python": "/home/odoo/venv/bin/python",
             "console":"integratedTerminal",
-            // "program": "/home/odoo/.local/bin/odoo",
             "program": "/home/odoo/venv/bin/odoo",
             "args": [
                // "-d", "base a iniciar",
