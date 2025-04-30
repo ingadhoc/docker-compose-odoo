@@ -51,6 +51,7 @@
         },
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
+        "python.terminal.activateEnvironment": false,
         // Linting (ruff)
         "python.linting.enabled": true,
         "python.linting.ruffEnabled": true,
@@ -116,7 +117,8 @@
         "ms-vsliveshare.vsliveshare",
         "shardulm94.trailing-spaces",
         "streetsidesoftware.code-spell-checker",
-        "njpwerner.autodocstring"
+        "njpwerner.autodocstring",
+        "trinhanhngoc.vscode-odoo"
       ]
     }
   }

@@ -4,7 +4,7 @@ Permite exponer tu local a internet, esto te permite prograr controladores que r
 
 [+info](https://ngrok.com/)
 
-En la maquina HOST
+En la máquina HOST
 
 ## Install
 
@@ -16,21 +16,21 @@ curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/tru
 
 ## usage
 
-En tu maquina local
+En tu máquina local
 
-(Asumimos que la URL de tu maquina local es `saas.18.odoo.localhost` )
+(Asumimos que la URL de tu máquina local es `saas.18.odoo.localhost` )
 
-En la maquina HOST
+En la máquina HOST
 
 ```sh
 ngrok http --host-header=saas.18.odoo.localhost 80
 ```
 
-Esto va a arrancar el servicio de redireccion y nos va a proveer de la URL estena que podemos usar para acceder a nuetro local.
+Esto va a arrancar el servicio de redirección y nos va a proveer de la URL externa que podemos usar para acceder a nuestro local.
 
 ![running ngrok](img/ngrok_1.png)
 
-Nota: si se accede desde un navegador web va a perdir confirmacion, antes de redireccioanrlo. Esto no pasa al acceder desde un cliente tipo curl o silimar.
+Nota: si se accede desde un navegador web va a pedir confirmación, antes de redireccionarlo. Esto no pasa al acceder desde un cliente tipo curl o similar.
 
 ## Configurar URL en odoo
 
