@@ -23,6 +23,9 @@
                 "ODOOLY_SSL_UNVERIFIED": "true",
                 "ODOO_LOGGING_JSON": "0"
             },
+            "preLaunchTask": "Update pathMappings",
+            "pathMappings": [
+            ],
         }
     ]
 }
