@@ -10,13 +10,23 @@ if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] && [[ -f "$SCRIPT_DIR/.env" ]]; then
     sed -i "s/^ODOO_VERSION=.*/ODOO_VERSION=$ODOO_V/" "$SCRIPT_DIR/.env"
 fi
 
-echo "Binding directory"
-rm -f "$SCRIPT_DIR/data/default" 2> /dev/null
-sudo setfacl -R -m u:$USER:rwX /var/lib/docker/volumes/${ODOO_V}_default
-ln -s /var/lib/docker/volumes/${ODOO_V}_default/_data "$SCRIPT_DIR/data/default"
-
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     echo "Pull latest image"
     source "$SCRIPT_DIR/.env"
     docker pull ${ODOO_IMAGE}:${ODOO_MINOR}
+fi
+
+echo "Binding directory"
+docker rm -f odoo-${ODOO_V} 2> /dev/null
+rm -f "$SCRIPT_DIR/data/default" 2> /dev/null
+docker volume rm -f ${ODOO_V}_default 2> /dev/null
+docker compose create
+VOLUME_MOUNTPOINT=$(docker volume inspect ${ODOO_V}_default 2> /dev/null | jq -r .[0].Mountpoint)
+if [[ "$VOLUME_MOUNTPOINT" =~ ^/ ]]; then
+    echo "Volume mountpoint detected: $VOLUME_MOUNTPOINT"
+    ln -s $VOLUME_MOUNTPOINT "$SCRIPT_DIR/data/default"
+    echo "Setting permissions"
+    sudo setfacl -R -m u:$USER:rwX $VOLUME_MOUNTPOINT
+    sudo setfacl -m u:$USER:rwX $(dirname "$VOLUME_MOUNTPOINT")
+    sudo setfacl -m u:$USER:rwX $(dirname $(dirname "$VOLUME_MOUNTPOINT"))
 fi
