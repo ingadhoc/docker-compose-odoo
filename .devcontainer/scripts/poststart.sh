@@ -20,4 +20,9 @@ for app in "/home/odoo/custom/repositories/"*; do
     fi
 done
 
-exit
+if [[ "$AD_DEV_MODE" == "MASTER" ]]; then
+    echo "Running in master mode"
+    ~/.resources/entrypoint
+fi
+
+exit 0

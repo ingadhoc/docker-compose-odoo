@@ -10,6 +10,19 @@ if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] && [[ -f "$SCRIPT_DIR/.env" ]]; then
     sed -i "s/^ODOO_VERSION=.*/ODOO_VERSION=$ODOO_V/" "$SCRIPT_DIR/.env"
 fi
 
+if [[ "$ODOO_V" == "master" ]]; then
+    echo "Fixing env vars"
+    # TODO: Update the ODOO_MINOR to master.dev when be ready
+    # sed -i "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
+    sed -i "s/^SERVER_WIDE_MODULES=/# SERVER_WIDE_MODULES=/" "$SCRIPT_DIR/.env"
+    sed -i "s/^IGNORE_SRC_REPOSITORIES=.*$/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
+    sed -i "s/^DOMAIN=.*/DOMAIN=$ODOO_V.odoo.localhost/" "$SCRIPT_DIR/.env"
+    sed -i "s/^ODOO_VERSION=.*/ODOO_VERSION=99/" "$SCRIPT_DIR/.env"
+
+    sed -i "s|/home/odoo/custom/repositories|/home/odoo/custom|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+    sed -i "s|\"AD_DEV_MODE\": \"NORMAL\"|\"AD_DEV_MODE\": \"MASTER\"|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+fi
+
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     echo "Pull latest image"
     source "$SCRIPT_DIR/.env"
