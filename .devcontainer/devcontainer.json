@@ -67,7 +67,7 @@
         },
         // PyLance
         "python.languageServer": "Pylance",
-        "python.languageServerMode": "full",
+        "python.analysis.languageServerMode": "light",
         "python.analysis.extraPaths": [
             "/home/odoo/src/odoo",
             "/home/odoo/src/enterprise",
