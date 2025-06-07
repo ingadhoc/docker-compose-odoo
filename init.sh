@@ -43,3 +43,9 @@ if [[ "$VOLUME_MOUNTPOINT" =~ ^/ ]]; then
     sudo setfacl -m u:$USER:rwX $(dirname "$VOLUME_MOUNTPOINT")
     sudo setfacl -m u:$USER:rwX $(dirname $(dirname "$VOLUME_MOUNTPOINT"))
 fi
+
+git update-index --assume-unchanged .devcontainer/.vscode/launch.json
+git update-index --assume-unchanged .devcontainer/devcontainer.json
+git update-index --assume-unchanged .env
+# To revert the changes, you can use:
+# git update-index --no-assume-unchanged .devcontainer/.vscode/launch.json
