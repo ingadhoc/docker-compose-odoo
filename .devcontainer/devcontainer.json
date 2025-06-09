@@ -21,7 +21,8 @@
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
-    "PATH": "${containerEnv:PATH}:/scripts/user"
+    "PATH": "${containerEnv:PATH}:/scripts/user",
+    "AD_DEV_MODE": "NORMAL"
   },
 
   // Configure tool-specific properties.
