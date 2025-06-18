@@ -55,6 +55,7 @@ services:
       - "172.60.0.10"
     networks:
       adhoc:
+        ipv4_address: 172.60.0.${ODOO_VERSION}
       minikube:
 
 volumes:
