@@ -25,6 +25,7 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
     if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] && [[ "$ODOO_V" -le "17" ]]; then
         echo "Disabling format on save for Odoo $ODOO_V"
         sed -i "s|\"editor.formatOnSave\": true,|\"editor.formatOnSave\": false,|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+        perl -0777 -i -pe 's/"editor.codeActionsOnSave":\s*\{.*?\},/"editor.codeActionsOnSave": {"source.fixAll": "never", "source.organizeImports": "never"},/sg' "$SCRIPT_DIR/.devcontainer/devcontainer.json"
     fi
 
     echo "Pull latest image"
