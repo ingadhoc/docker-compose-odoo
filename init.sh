@@ -20,6 +20,7 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         sed -i "s/^IGNORE_SRC_REPOSITORIES=.*$/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
         sed -i "s|/home/odoo/custom/repositories|/home/odoo/custom|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
         sed -i "s|\"AD_DEV_MODE\": \"NORMAL\"|\"AD_DEV_MODE\": \"MASTER\"|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+        sed -i "s/ipv4_address:.*/ipv4_address: 172.60.0.99/" "$SCRIPT_DIR/docker-compose.yml"
     fi
 
     if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] && [[ "$ODOO_V" -le "17" ]]; then
@@ -52,5 +53,6 @@ fi
 git update-index --assume-unchanged .devcontainer/.vscode/launch.json
 git update-index --assume-unchanged .devcontainer/devcontainer.json
 git update-index --assume-unchanged .env
+git update-index --assume-unchanged docker-compose.yml
 # To revert the changes, you can use:
 # git update-index --no-assume-unchanged .devcontainer/.vscode/launch.json
