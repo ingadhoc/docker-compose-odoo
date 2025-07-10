@@ -10,11 +10,10 @@ for app in "/home/odoo/custom/repositories/"*; do
             if [[ -d $module ]]; then
                 module_name=$(basename $module)
                 [[ $module_name == .* || $module_name == src* ]] && continue
-                echo "ln -sf $module/ /home/odoo/src/odoo/odoo/addons/$module_name"
-                if [ ! -L /home/odoo/src/odoo/odoo/addons/$module_name ]; then
-                    ln -sf $module/ /home/odoo/src/odoo/odoo/addons/$module_name
+                echo "ln -sf $module/ /home/odoo/src/$module_name"
+                if [ ! -L /home/odoo/src/$module_name ]; then
+                    ln -sf $module/ /home/odoo/src/$module_name
                 fi
-                echo "odoo/addons/$module_name" >> /home/odoo/src/odoo/.git/info/exclude
             fi
         done
     fi
