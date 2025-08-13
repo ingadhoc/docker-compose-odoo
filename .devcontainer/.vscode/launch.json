@@ -21,11 +21,19 @@
             // "justMyCode": false, // we don't want to debug this, this disable the debug of our code
             "env": {
                 "ODOOLY_SSL_UNVERIFIED": "true",
-                "ODOO_LOGGING_JSON": "0"
+                "ODOO_LOGGING_JSON": "0",
+                // "GEVENT_SUPPORT": "True",
             },
-            "preLaunchTask": "Update pathMappings",
             "pathMappings": [
-            ],
+                {
+                    "localRoot": "${workspaceFolder}/src",
+                    "remoteRoot": "/home/odoo/src"
+                },
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/home/odoo/custom/repositories"
+                }
+            ]
         }
     ]
 }
