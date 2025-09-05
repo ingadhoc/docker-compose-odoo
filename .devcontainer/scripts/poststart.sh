@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Fix addons paths
+echo "PostStart"
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
         app_name=$(basename $app)
@@ -13,6 +14,7 @@ for app in "/home/odoo/custom/repositories/"*; do
                 echo "ln -sf $module/ /home/odoo/src/$module_name"
                 if [ ! -L /home/odoo/src/$module_name ]; then
                     ln -sf $module/ /home/odoo/src/$module_name
+                    echo "Creating symlink for $module_name ln -sf $module/ /home/odoo/src/$module_name"
                 fi
             fi
         done

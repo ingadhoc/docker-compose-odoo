@@ -17,9 +17,11 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
     if [[ "$ODOO_V" == "master" ]]; then
         sed -i "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.dev/" "$SCRIPT_DIR/.env"
         sed -i "s/^SERVER_WIDE_MODULES=/# SERVER_WIDE_MODULES=/" "$SCRIPT_DIR/.env"
-        sed -i "s/^IGNORE_SRC_REPOSITORIES=.*$/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
+        # sed -i "s/^IGNORE_SRC_REPOSITORIES=.*$/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
         sed -i "s|/home/odoo/custom/repositories|/home/odoo/custom|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+        sed -i "s|/home/odoo/custom/repositories|/home/odoo/custom|g" "$SCRIPT_DIR/.devcontainer/scripts/oncreate.sh"
         sed -i "s|\"AD_DEV_MODE\": \"NORMAL\"|\"AD_DEV_MODE\": \"MASTER\"|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
+        sed -i 's/"localRoot": "\${workspaceFolder}",/"localRoot": "${workspaceFolder}\/repositories",/' $SCRIPT_DIR/.devcontainer/.vscode/launch.json
         sed -i "s/ipv4_address:.*/ipv4_address: 172.60.0.99/" "$SCRIPT_DIR/docker-compose.yml"
     fi
 
@@ -51,6 +53,7 @@ if [[ "$VOLUME_MOUNTPOINT" =~ ^/ ]]; then
 fi
 
 git update-index --assume-unchanged .devcontainer/.vscode/launch.json
+git update-index --assume-unchanged .devcontainer/scripts/oncreate.sh
 git update-index --assume-unchanged .devcontainer/devcontainer.json
 git update-index --assume-unchanged .env
 git update-index --assume-unchanged docker-compose.yml

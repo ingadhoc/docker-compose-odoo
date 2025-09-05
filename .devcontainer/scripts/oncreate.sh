@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "OnCreate"
+
 # Ignore gitaggregate config in order to use the one from the host
 rm -f /home/odoo/.gitconfig
 
@@ -10,7 +12,7 @@ mkdir -p /home/odoo/custom/repositories/src
 for app in "/home/odoo/src/"*; do
     if [[ -d $app ]]; then
         module_name=$(basename $app)
-        ln -sf $app /home/odoo/custom/repositories/src/$module_name
+        echo "Creating symlink for $module_name ln -sf $app /home/odoo/custom/src/$module_name"
     fi
 done
 
