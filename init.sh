@@ -17,7 +17,7 @@ assume-unchanged() {
     # git update-index --no-assume-unchanged .devcontainer/.vscode/launch.json
 }
 
-while getopts ":u|r" option; do
+while getopts ":u|r|c" option; do
    case $option in
       u)
          assume-unchanged no
@@ -25,6 +25,16 @@ while getopts ":u|r" option; do
       r)
          assume-unchanged
          exit;;
+      c)
+         docker image prune -f
+         exit;;
+      *)
+         echo "Invalid option"
+         echo "Usage: $0 [-u | -r | -c]"
+         echo "u: (unset ignored files) Unset assume-unchanged"
+         echo "r: (restore ignored files) Set assume-unchanged"
+         echo "c: (clean) Prune Docker images"
+         exit 1;;
    esac
 done
 
