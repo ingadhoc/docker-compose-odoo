@@ -24,16 +24,6 @@
                 "ODOO_LOGGING_JSON": "0",
                 // "GEVENT_SUPPORT": "True",
             },
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}/src",
-                    "remoteRoot": "/home/odoo/src"
-                },
-                {
-                    "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "/home/odoo/custom/repositories"
-                }
-            ]
         }
     ]
 }

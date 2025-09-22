@@ -1,0 +1,5 @@
+[[config]]
+name = "Odoo by Adhoc"
+python_path = "/usr/local/bin/python" # Using the system Python because /home/odoo/venv/bin/python crashes
+odoo_path = "/home/odoo/src/odoo"
+addons_paths = []
