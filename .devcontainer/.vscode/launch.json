@@ -23,6 +23,7 @@
                 "ODOOLY_SSL_UNVERIFIED": "true",
                 "ODOO_LOGGING_JSON": "0",
                 // "GEVENT_SUPPORT": "True",
+                "HTTP_X_FORWARDED_HOST": "1"
             },
         }
     ]

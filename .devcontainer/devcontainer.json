@@ -66,6 +66,7 @@
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
         "python.terminal.activateEnvironment": false,
+        "python.languageServer": "None",
         // Linting (ruff)
         "python.linting.enabled": true,
         "python.linting.ruffEnabled": true,
@@ -92,6 +93,7 @@
         "debug.openExplorerOnEnd": true,
         "debug.allowBreakpointsEverywhere": true,
         "debug.hideLauncherWhileDebugging": true,
+        "debug.internalConsoleOptions": "neverOpen",
         "debugpy.showPythonInlineValues": true,
         // "debugpy.debugJustMyCode": false # We don't want this
         // Auto Docstring
@@ -99,7 +101,11 @@
         "autoDocstring.docstringFormat": "google",
         "autoDocstring.generateDocstringOnEnter": true,
         // Odoo
-        "Odoo.selectedProfile": "Odoo by Adhoc"
+        "Odoo.selectedProfile": "Odoo by Adhoc",
+        // "odooLsp.server.configFile": "./odools.toml",
+        // "odooLsp.server.enable": true,
+        // "odooLsp.python.interpreter": "venv/bin/python",
+        "extensions.ignoreRecommendations": true
       },
       //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
       "extensions": [

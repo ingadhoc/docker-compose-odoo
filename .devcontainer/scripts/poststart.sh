@@ -11,7 +11,7 @@ ODOOLS_TOML="/home/odoo/odools.toml"
 
 if [[ -f "$ODOO_CONF" ]]; then
     ADDONS_PATH=$(grep "^addons_path" "$ODOO_CONF" | cut -d'=' -f2 | xargs)
-    
+
     if [[ -n "$ADDONS_PATH" && -f "$ODOOLS_TOML" ]]; then
         # Convert comma-separated paths to array format
         ARRAY_PATHS=$(echo "$ADDONS_PATH" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
