@@ -1,7 +1,6 @@
 [[config]]
 name = "Odoo by Adhoc"
 odoo_path = "/home/odoo/src/odoo"
-python_path = "/usr/local/bin/python"
 addons_paths = []
 
 [[config.diagnostic_filters]]
