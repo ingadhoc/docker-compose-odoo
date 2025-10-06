@@ -6,4 +6,3 @@ tmp/*
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
 !.devcontainer/workspace/.gitkeep
-.DS_Store
