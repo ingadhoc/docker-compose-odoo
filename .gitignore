@@ -1,7 +1,10 @@
 data/custom/repositories/*
 data/custom/*
-data/default
+!data/custom/repositories/
 !data/custom/repositories/pyproject.toml
+!data/custom/repositories/test-development-instructions.md
+!data/custom/repositories/test-from-video-instructions.md
+data/default
 tmp/*
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
