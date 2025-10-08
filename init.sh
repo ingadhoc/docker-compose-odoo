@@ -114,3 +114,6 @@ if [[ "$VOLUME_MOUNTPOINT" =~ ^/ ]]; then
         sudo setfacl -m u:$USER:rwX $(dirname $(dirname "$VOLUME_MOUNTPOINT"))
     fi
 fi
+
+assume-unchanged
+echo "Setup completed. You can now open this folder in VS Code and start the devcontainer."
