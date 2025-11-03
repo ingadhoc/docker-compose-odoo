@@ -115,5 +115,8 @@ if [[ "$VOLUME_MOUNTPOINT" =~ ^/ ]]; then
     fi
 fi
 
+# Clean up dangling images
+docker image prune -f
+
 assume-unchanged
 echo "Setup completed. You can now open this folder in VS Code and start the devcontainer."
