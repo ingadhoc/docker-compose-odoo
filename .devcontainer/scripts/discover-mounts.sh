@@ -49,7 +49,7 @@ PROJECTS=(
     # el REPO es oba-project — el sufijo -project es del repo, no del proyecto
     # (ADR 0028 + 0039). oba = hub de specs/decisiones del producto OBA;
     # oba-project-memory = wiki/memoria (su nombre de repo NO se acorta).
-    "oba|${HOME}/repositorios/oba|/home/odoo/custom/oba|"
+    "oba|${HOME}/repositorios/oba|/home/odoo/custom/oba||git@github.com:ingadhoc/oba-project.git"
     "oba-project-memory|${HOME}/repositorios/oba-project-memory|/home/odoo/custom/oba-project-memory|"
     # Self-mount del propio docker-compose-odoo deshabilitado (mayo 2026):
     # cuando devops ya está mounteado, el bind anidado en
@@ -68,11 +68,21 @@ declare -A SOURCES=()
 declare -A TARGETS=()
 
 for entry in "${PROJECTS[@]}"; do
-    IFS='|' read -r id host target req <<<"$entry"
+    IFS='|' read -r id host target req git_url <<<"$entry"
     if [[ -d "$host" ]]; then
         PRESENT[$id]=1
         SOURCES[$id]="$host"
         TARGETS[$id]="$target"
+    elif [[ -n "${git_url:-}" ]]; then
+        echo "discover-mounts: $id no encontrado — clonando desde $git_url..." >&2
+        if git clone "$git_url" "$host" >&2; then
+            echo "discover-mounts: $id clonado OK → $host" >&2
+            PRESENT[$id]=1
+            SOURCES[$id]="$host"
+            TARGETS[$id]="$target"
+        else
+            echo "discover-mounts: WARN — falló el clone de $id (mount omitido)" >&2
+        fi
     fi
 done
 
@@ -81,7 +91,7 @@ done
 # requires. Alcanza para cadenas de 1 nivel (el caso de hoy: todos `requires: ""`).
 # Si algún día se arma una cadena `A→B→C`, esto necesita iterar hasta punto fijo.
 for entry in "${PROJECTS[@]}"; do
-    IFS='|' read -r id host target req <<<"$entry"
+    IFS='|' read -r id host target req git_url <<<"$entry"
     if [[ -n "$req" && -n "${PRESENT[$id]:-}" && -z "${PRESENT[$req]:-}" ]]; then
         unset "PRESENT[$id]"
         echo "discover-mounts: $id omitido (requiere $req mounteado)" >&2
@@ -90,7 +100,7 @@ done
 
 detected=()
 for entry in "${PROJECTS[@]}"; do
-    IFS='|' read -r id host target req <<<"$entry"
+    IFS='|' read -r id host target req git_url <<<"$entry"
     [[ -n "${PRESENT[$id]:-}" ]] && detected+=("$id")
 done
 
@@ -156,7 +166,7 @@ CUSTOM_DIR="${REPO_ROOT}/data/custom"
 if [[ -d "$CUSTOM_DIR" ]]; then
     declare -A _keep=()
     for entry in "${PROJECTS[@]}"; do
-        IFS='|' read -r id host target req <<<"$entry"
+        IFS='|' read -r id host target req git_url <<<"$entry"
         case "$target" in /home/odoo/custom/*) _keep["$(basename "$target")"]=1 ;; esac
     done
     for s in repositories src adhoc; do _keep["$s"]=1; done   # dirs estructurales del workspace
