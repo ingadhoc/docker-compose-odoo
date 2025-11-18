@@ -40,12 +40,55 @@ Además, podés generar pruebas funcionales basadas en un **guion extraído de u
 
 5. Comparás con los tests ya existentes para ver patrones reutilizables (setup, helpers, clientes ficticios, etc.).
 
+   - **Uso obligatorio de data demo como referencia**
+
+   Cuando necesites datos para los tests:
+
+   - **Leé los XML de demo del módulo (carpeta `demo/`) solamente como referencia conceptual**  
+   para entender relaciones, campos y valores típicos.
+
+   - **Nunca uses registros de demo directamente**, es decir:  
+   **queda prohibido usar `env.ref('module.demo_xxx')`** dentro de los tests.
+
+   - **Siempre creá nuevos registros** con `.create()` en el `setUp`, basados en la estructura que viste en los archivos de demo.
+
+   Ejemplo:
+
+   En `/demo`:
+
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <odoo noupdate="1">
+      <record id="res_partner_1" model="res.partner">
+         <field name="name">Test Partner</field>
+         <field name="email">test@example.com</field>
+      </record>
+   </odoo>
+   ```
+
+   En `setup` de test:
+
+   ```python
+   # Incorrecto (prohibido)
+   partner = self.env.ref("my_module.res_partner_1")
+
+   # Correcto (obligatorio)
+   partner = self.env["res.partner"].create({
+      "name": "Test Partner",
+      "email": "test@example.com",
+   })
+   ```
+
+   Objetivo:
+   **los tests deben ser autónomos, reproducibles, aislados y no depender jamás de la carga de demo data.**
+
 6. Diseñás un nuevo archivo de test:
+
    - Elegir clase base (`TransactionCase` u otra aplicable).
    - Crear `setUp` / `tearDown` (o `setUpClass` / `tearDownClass`) si conviene.
    - Para cada cambio relevante, un método `test_…` con aserciones (`assertEqual`, `assertTrue`, `assertRaises`, etc.).
    - Comentar brevemente qué cambio está validando.
-   - Usar decoradores `@tagged` si la versión Odoo lo permite (por ejemplo `@tagged('-at_install', 'post_install')`) para controlar cuándo se ejecuta el test.  
+   - Usar decoradores `@tagged` si la versión Odoo lo permite (por ejemplo `@tagged('-at_install', 'post_install')`) para controlar cuándo se ejecuta el test.
      En Odoo 19, los tests comunes heredan `TransactionCase` y pueden usar etiquetas `@tagged` o `--test-tags`.
    - No usar `cr.commit()` manualmente salvo en casos justificados muy particulares.
 
@@ -66,12 +109,13 @@ Además, podés generar pruebas funcionales basadas en un **guion extraído de u
    Los comandos deben correrse tal cual descritos arriba, no usar `python` ni `python3` ni `addons`.
 
 9. Analizás los resultados:
+
    - Si hay fallos o errores, ajustás los tests: refinar setup, corregir datos o aserciones.
    - Iterás hasta 5 veces o hasta que los tests pasen.
    - Si en alguna ronda tenés dudas o falta contexto, pausás y preguntas.
 
-10. En el mejor caso, entregás los archivos de prueba finales.  
-   Si no se logró, entregás los tests parciales y los errores y solicitás intervención del developer.
+10. En el mejor caso, entregás los archivos de prueba finales.
+    Si no se logró, entregás los tests parciales y los errores y solicitás intervención del developer.
 
 ## 🧭 Buenas prácticas adicionales
 
@@ -80,6 +124,7 @@ Además, podés generar pruebas funcionales basadas en un **guion extraído de u
 - Los tests no deben generar residuos: cada prueba debe aislarse y dejar la base limpia.
 - Usar decoradores `@tagged` y filtros (`--test-tags`) según versión Odoo.
 - Evitar duplicar fixtures o helpers si ya existen en el módulo.
-- Comentar dentro de los tests qué paso del guion o qué cambio del diff están verificando.  
+- Comentar dentro de los tests qué paso del guion o qué cambio del diff están verificando.
 - Cuando preguntes al developer, hacelo claro y conciso, por ejemplo:
+
   > “No se especifica el estado inicial del modelo X; ¿debe estar en borrador o confirmado?”
