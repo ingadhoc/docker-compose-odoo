@@ -13,11 +13,11 @@ services:
       - traefik.http.services.odoo-${ODOO_VERSION}.loadbalancer.server.port=8069
       - traefik.http.routers.odoo-${ODOO_VERSION}.service=odoo-${ODOO_VERSION}
       - traefik.http.routers.odoo-${ODOO_VERSION}.entrypoints=web
-      - traefik.http.routers.odoo-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`)
+      - traefik.http.routers.odoo-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`^[a-z0-9_-]+.$DOMAIN$`)
       # solo activar si se va a trabajar con workers (workers != 0)
       # longpolling / websocket
       # - traefik.http.services.long-${ODOO_VERSION}.loadbalancer.server.port=8072
-      # - traefik.http.routers.long-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`{subdomain:[a-z0-9-_]+}.$DOMAIN`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))
+      # - traefik.http.routers.long-${ODOO_VERSION}.rule=Host(`$DOMAIN`) || HostRegexp(`^[a-z0-9_-]+.$DOMAIN$`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))
       # - traefik.http.routers.long-${ODOO_VERSION}.entrypoints=web
       # - traefik.http.routers.long-${ODOO_VERSION}.service=long-${ODOO_VERSION}
     environment:
@@ -50,6 +50,8 @@ services:
       LIMIT_MEMORY_SOFT: "3147484000"
       LIMIT_MEMORY_HARD: "4777721600"
       WAIT_PG: "false"
+      ADHOC_ANALYTIC_ACCOUNT: "development"
+      ADHOC_DATABASE: "development"
     dns:
       # - "8.8.8.8"
       - "172.60.0.10"
