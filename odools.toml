@@ -1,0 +1,11 @@
+[[config]]
+name = "Odoo by Adhoc"
+odoo_path = "/home/odoo/src/odoo"
+addons_paths = []
+
+[[config.diagnostic_filters]]
+codes = ["OLS.*"]
+paths = [
+  "/home/odoo/src/*",
+]
+path_type = "in"

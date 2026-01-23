@@ -13,6 +13,7 @@ assume-unchanged() {
     git update-index ${OPERATION} $SCRIPT_DIR/.devcontainer/devcontainer.json
     git update-index ${OPERATION} $SCRIPT_DIR/.env
     git update-index ${OPERATION} $SCRIPT_DIR/docker-compose.yml
+    git update-index ${OPERATION} $SCRIPT_DIR/odools.toml
     # To revert the changes, you can use:
     # git update-index --no-assume-unchanged .devcontainer/.vscode/launch.json
 }

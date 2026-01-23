@@ -3,13 +3,16 @@
   "dockerComposeFile": ["../docker-compose.yml"],
   "service": "odoo",
   // "workspaceFolder": "/workspace",
-  "workspaceFolder": "/home/odoo/custom/repositories",
+  "workspaceFolder": "/home/odoo",
   "mounts": [
     {
       "source": "${localWorkspaceFolder}/.devcontainer/scripts", "target": "/scripts", "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/custom/repositories/.vscode", "type": "bind"
+      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/.vscode", "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/odools.toml", "target": "/home/odoo/odools.toml", "type": "bind"
     }
     // ,"source=${env:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
   ],
@@ -31,18 +34,32 @@
       "remoteUser": "odoo",
       "settings":{
         "files.insertFinalNewline": true,
-        "terminal.integrated.cwd": "/home/odoo/custom/repositories",
+        "terminal.integrated.cwd": "/home/odoo",
         "remote.autoForwardPorts": false,
         // Ignore files in src directory the workspace
         "files.watcherExclude": {
-          "/home/odoo/src/**" : true,
-          "/home/odoo/custom/repositories/src/**" : true
+          "/home/odoo/src/**" : true
         },
         "files.exclude": {
-            ".devcontainer": true,
-            //".vscode": true,
-            ".github": true,
-			      "*.Dockerfile.dockerignore": true
+          ".bash_aliases": true,
+          ".bash_logout": true,
+          ".bashrc": true,
+          ".cache": true,
+          ".config": true,
+          ".devcontainer": true,
+          ".dotnet": true,
+          ".gitconfig": true,
+          ".local": true,
+          ".profile": true,
+          ".resources": true,
+          ".ssh": true,
+          ".vscode-server": true,
+          ".bash_history": true,
+          ".npm": true,
+          ".ipython": true,
+          "ODOO_BY_ADHOC_VERSION": true,
+          "data": true,
+          "venv": true
         },
         "search.exclude":{
 			    ".devcontainer": true,
@@ -66,28 +83,6 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // PyLance
-        "python.languageServer": "Pylance",
-        "python.analysis.languageServerMode": "light",
-        "python.analysis.extraPaths": [
-            "/home/odoo/src/odoo",
-            "/home/odoo/src/enterprise",
-            "/home/odoo/src/odoo-module-migrator",
-            "/home/odoo/src/odoo-upgrade",
-            "/home/odoo/src/odooly",
-            "/home/odoo/src/openupgradelib",
-            "/home/odoo/src/upgrade-util"
-        ],
-        // "python.linting.pylintArgs":[],
-        "python.analysis.exclude": [
-          // "**"
-          "/workspace/src/**",
-          "/home/odoo/custom/repositories/src/**"
-        ],
-        "python.analysis.autoSearchPaths": true,
-        "python.analysis.diagnosticMode": "openFilesOnly",
-        "python.analysis.indexing": true,
-        "python.analysis.userFileIndexingLimit": -1,
         // Spell check
         "cSpell.diagnosticLevel": "Hint",
         "cSpell.diagnosticLevelFlaggedWords":   "Hint",
@@ -97,6 +92,7 @@
         // Debugger
         "debug.toolBarLocation": "commandCenter",
         "debug.openDebug": "neverOpen",
+        "debug.internalConsoleOptions": "neverOpen",
         "debug.openExplorerOnEnd": true,
         "debug.allowBreakpointsEverywhere": true,
         "debug.hideLauncherWhileDebugging": true,
@@ -105,12 +101,14 @@
         // Auto Docstring
         "autoDocstring.guessTypes": true,
         "autoDocstring.docstringFormat": "google",
-        "autoDocstring.generateDocstringOnEnter": true
+        "autoDocstring.generateDocstringOnEnter": true,
+        // Odoo
+        "Odoo.selectedProfile": "Odoo by Adhoc",
+        "extensions.ignoreRecommendations": true
       },
       //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance",
         "ms-python.debugpy",
         "charliermarsh.ruff",
         "eamodio.gitlens",
@@ -119,7 +117,8 @@
         "shardulm94.trailing-spaces",
         "streetsidesoftware.code-spell-checker",
         "njpwerner.autodocstring",
-        "trinhanhngoc.vscode-odoo"
+        "mechatroner.rainbow-csv",
+        "Odoo.odoo",
       ]
     }
   }
