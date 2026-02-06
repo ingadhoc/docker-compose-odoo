@@ -142,6 +142,8 @@ No usar:
 - `python3`
 - ejecución directa de archivos
 
+**IMPORTANTE:** Desde los módulos en v19 o más, cuando el módulo ya se encuentra instalado en la base de datos, debes usar "-u" en lugar de "-i" para que los tests se corran correctamente.
+
 ## Iteración y cierre
 
 1. Analizar resultados:
