@@ -106,6 +106,7 @@ Objetivo: tests **autónomos, reproducibles y aislados**, sin depender de demo d
      ```
 
    - No usar `python`, `python3`, `addons` ni variantes.
+   - **IMPORTANTE:** Desde los módulos en versión 19 o más, cuando el módulo ya se encuentra instalado en la base de datos, debes usar "-u" en lugar de "-i" para que los tests se corran correctamente.
 8. Analizar resultados y refinar:
    - Hasta **5 iteraciones** máximo.
    - Si falta contexto, pausar y preguntar (una pregunta concreta por vez).
