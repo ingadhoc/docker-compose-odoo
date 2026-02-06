@@ -99,13 +99,22 @@ Objetivo: tests **autónomos, reproducibles y aislados**, sin depender de demo d
    - Comentario breve indicando qué valida respecto al diff.
    - Usar `@tagged` si está disponible en la versión (p. ej. `@tagged('-at_install', 'post_install')`).
 7. Ejecutar tests (si el developer provee una DB con el módulo instalado):
-   - Comando obligatorio:
+    - Comando (elige según el estado del módulo):
 
-     ```bash
-     odoo -d <db_name> --stop-after-init --test-enable -i <nombre_modulo> --test-tags /<nombre_modulo>
-     ```
+       - Si el módulo NO está instalado (instala y prueba):
 
-   - No usar `python`, `python3`, `addons` ni variantes.
+          ```bash
+          odoo -d <db_name> --stop-after-init --test-enable -i <nombre_modulo> --test-tags /<nombre_modulo>
+          ```
+
+       - Si el módulo YA está instalado (actualiza y prueba):
+
+          ```bash
+          odoo -d <db_name> --stop-after-init --test-enable -u <nombre_modulo> --test-tags /<nombre_modulo>
+          ```
+
+    - No usar `python`, `python3`, `addons` ni variantes.
+    - **IMPORTANTE:** A partir de Odoo v19 (v19+), si el módulo ya está instalado en la base de datos debes usar `-u` en lugar de `-i` para ejecutar los tests correctamente.
 8. Analizar resultados y refinar:
    - Hasta **5 iteraciones** máximo.
    - Si falta contexto, pausar y preguntar (una pregunta concreta por vez).

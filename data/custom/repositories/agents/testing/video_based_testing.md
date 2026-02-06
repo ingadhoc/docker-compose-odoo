@@ -130,10 +130,18 @@ Para cada guion:
 
 Antes de ejecutar, preguntar si el developer dispone de una base con el módulo instalado.
 
-Ejecutar usando **exclusivamente**:
+Ejecutar usando **exclusivamente** uno de los siguientes, según el estado del módulo en la base de datos:
+
+- Si el módulo NO está instalado (instala y prueba):
 
 ```bash
 odoo -d <db_name> --stop-after-init --test-enable -i <module_name> --test-tags /<module_name>
+```
+
+- Si el módulo YA está instalado (actualiza y prueba):
+
+```bash
+odoo -d <db_name> --stop-after-init --test-enable -u <module_name> --test-tags /<module_name>
 ```
 
 No usar:
@@ -141,6 +149,8 @@ No usar:
 - `python`
 - `python3`
 - ejecución directa de archivos
+
+**IMPORTANTE:** A partir de Odoo v19 (v19+), si el módulo ya está instalado en la base de datos debes usar `-u` en lugar de `-i` para ejecutar los tests correctamente.
 
 ## Iteración y cierre
 
