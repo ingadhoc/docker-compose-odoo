@@ -1,0 +1,127 @@
+{
+  "name": "Odoo with Repositories",
+  "dockerComposeFile": ["../../docker-compose.yml"],
+  "service": "odoo",
+  "runArgs": ["--network=host"],
+  "workspaceFolder": "/home/odoo/custom/repositories",
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolder}/.devcontainer/scripts", "target": "/scripts", "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "${containerWorkspaceFolder}/.vscode", "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/.devcontainer/agents", "target": "/agents", "type": "bind"
+    }
+  ],
+
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  // "features": {},
+
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "/bin/bash -lc 'chmod +x /scripts/poststart.sh && /bin/bash -lc \"/scripts/poststart.sh 2>&1 | tee -a /tmp/postCreateCommand.log\"'",
+  "onCreateCommand": "/bin/bash -lc 'chmod +x /scripts/oncreate.sh && /bin/bash -lc \"/scripts/oncreate.sh 2>&1 | tee -a /tmp/onCreateCommand.log\"'",
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/scripts/user",
+    "AD_DEV_MODE": "NORMAL"
+  },
+
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "remoteUser": "odoo",
+      "settings":{
+        "files.insertFinalNewline": true,
+        "terminal.integrated.cwd": "/home/odoo/custom/repositories",
+        "remote.autoForwardPorts": false,
+        // Ignore files in src directory the workspace
+        "files.watcherExclude": {
+          "/home/odoo/src/**" : true,
+          "/home/odoo/custom/repositories/src/**" : true
+        },
+        "files.exclude": {
+            ".devcontainer": true,
+            //".vscode": true,
+            ".github": true,
+			      "*.Dockerfile.dockerignore": true
+        },
+        "search.exclude":{
+			    ".devcontainer": true,
+          "dockerfiles": true,
+          // ".vscode": true,
+          ".github": true
+        },
+        // Python Defaults
+        "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
+        "python.terminal.activateEnvironment": false,
+        // Linting (ruff)
+        "python.linting.enabled": true,
+        "python.linting.ruffEnabled": true,
+        // Default Ruff config
+        "ruff.exclude": [
+          "/home/odoo/src/**"
+        ],
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": false,
+        "editor.formatOnType": false,
+        "editor.autoIndent": "none",
+        "editor.codeActionsOnSave": {},
+        // PyLance
+        "python.languageServer": "Pylance",
+        "python.analysis.languageServerMode": "light",
+        "python.analysis.extraPaths": [
+            "/home/odoo/src/odoo",
+            "/home/odoo/src/enterprise",
+            "/home/odoo/src/odoo-module-migrator",
+            "/home/odoo/src/odoo-upgrade",
+            "/home/odoo/src/odooly",
+            "/home/odoo/src/openupgradelib",
+            "/home/odoo/src/upgrade-util"
+        ],
+        // "python.linting.pylintArgs":[],
+        "python.analysis.exclude": [
+          // "**"
+          "/workspace/src/**",
+          "/home/odoo/custom/repositories/src/**"
+        ],
+        "python.analysis.autoSearchPaths": true,
+        "python.analysis.diagnosticMode": "openFilesOnly",
+        "python.analysis.indexing": true,
+        "python.analysis.userFileIndexingLimit": -1,
+        // Spell check
+        "cSpell.diagnosticLevel": "Hint",
+        "cSpell.diagnosticLevelFlaggedWords":   "Hint",
+        // Trailing spaces
+        "trailing-spaces.highlightCurrentLine": true,
+        "trailing-spaces.syntaxIgnore": ["markdown"],
+        // Debugger
+        "debug.toolBarLocation": "commandCenter",
+        "debug.openDebug": "neverOpen",
+        "debug.openExplorerOnEnd": true,
+        "debug.allowBreakpointsEverywhere": true,
+        "debug.hideLauncherWhileDebugging": true,
+        "debugpy.showPythonInlineValues": true,
+        // "debugpy.debugJustMyCode": false # We don't want this
+        // Auto Docstring
+        "autoDocstring.guessTypes": true,
+        "autoDocstring.docstringFormat": "google",
+        "autoDocstring.generateDocstringOnEnter": true
+      },
+      //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "eamodio.gitlens",
+        "usernamehw.errorlens",
+        "ms-vsliveshare.vsliveshare",
+        "shardulm94.trailing-spaces",
+        "streetsidesoftware.code-spell-checker",
+        "njpwerner.autodocstring",
+        "trinhanhngoc.vscode-odoo"
+      ]
+    }
+  }
+}

@@ -1,4 +1,14 @@
+---
+name: odoo-test-from-video
+description: Genera tests automatizados en Odoo a partir de guiones funcionales derivados de videos, demos o walkthroughs. Mapea cada paso del guion a código testeable y itera hasta obtener tests estables.
+argument-hint: Guion funcional paso a paso (extraído de un video, demo o checklist de QA manual).
+---
+
 # AI Agent: Desarrollo de tests basado en guion de video
+
+## Skills a consultar
+
+Antes de generar cualquier test, localiza la skill de Odoo en `.agents/skills/` cuyo nombre empiece por `odoo` y lee las guías de `dev/` relevantes (p. ej. `*-testing-guide.md`, `*-model-guide.md`, `*-transaction-guide.md`).
 
 ## Rol
 
@@ -65,8 +75,8 @@ No asume cambios recientes de código ni rangos de commits.
 
 ## Principio rector
 
-> **El guion es la fuente de verdad.**  
-> El test debe validar exactamente lo que el guion describe, no lo que el código “parece” hacer.
+> **El guion es la fuente de verdad.**
+> El test debe validar exactamente lo que el guion describe, no lo que el código "parece" hacer.
 
 ## Uso de datos (regla estricta)
 
@@ -77,13 +87,13 @@ Cuando necesites entender estructuras o relaciones:
 - **Leé los XML de `demo/` solo como referencia conceptual**.
 - **Está prohibido usar registros demo directamente** en tests.
 
-❌ Prohibido:
+Prohibido:
 
 ```python
 self.env.ref("my_module.demo_record")
 ```
 
-✅ Obligatorio:
+Obligatorio:
 
 ```python
 self.env["res.partner"].create({
@@ -150,7 +160,7 @@ No usar:
 - `python3`
 - ejecución directa de archivos
 
-**IMPORTANTE:** A partir de Odoo v19 (v19+), si el módulo ya está instalado en la base de datos debes usar `-u` en lugar de `-i` para ejecutar los tests correctamente.
+**IMPORTANTE:** Las opciones CLI y el comportamiento pueden variar entre versiones de Odoo; consulta la skill de Odoo en el workspace para las recomendaciones específicas de la versión objetivo.
 
 ## Iteración y cierre
 
@@ -179,9 +189,9 @@ No usar:
 
 Solo cuando sea necesario para avanzar:
 
-- “¿Cuál es el estado inicial exacto antes del paso 1?”
-- “¿Este flujo se ejecuta con permisos estándar o requiere `sudo()`?”
-- “¿Este paso del guion corresponde a un método específico o a una acción compuesta?”
-- “¿Este comportamiento sigue siendo esperado o el video está desactualizado?”
+- "¿Cuál es el estado inicial exacto antes del paso 1?"
+- "¿Este flujo se ejecuta con permisos estándar o requiere `sudo()`?"
+- "¿Este paso del guion corresponde a un método específico o a una acción compuesta?"
+- "¿Este comportamiento sigue siendo esperado o el video está desactualizado?"
 
 No hacer preguntas meta ni redundantes.

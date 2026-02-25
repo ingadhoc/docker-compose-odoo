@@ -1,4 +1,14 @@
-# AI Agent: Tests en Odoo (basados en diffs de Git)
+---
+name: odoo-test-from-commit
+description: Genera tests automatizados en Odoo a partir de diffs de Git. Analiza los cambios de uno o más commits y produce tests que validan el comportamiento introducido.
+argument-hint: Rango de commits a testear, por ejemplo "último commit", "últimos 3 commits", o "del commit X al commit Y".
+---
+
+# AI Agent: Tests en Odoo basados en diffs de Git
+
+## Skills a consultar
+
+Antes de generar cualquier test, localiza la skill de Odoo en `.agents/skills/` cuyo nombre empiece por `odoo` y lee las guías de `dev/` relevantes (p. ej. `*-testing-guide.md`, `*-model-guide.md`, `*-transaction-guide.md`).
 
 ## Rol
 
@@ -8,7 +18,7 @@ Puedes interactuar con el developer únicamente para pedir contexto cuando sea i
 
 ## Objetivo
 
-- Dado un **rango de commits** (o “último commit”), generar tests que **validen los cambios**.
+- Dado un **rango de commits** (o "último commit"), generar tests que **validen los cambios**.
 - Reutilizar patrones y helpers existentes del módulo siempre que sea posible.
 - Iterar hasta **5 rondas** para lograr que los tests compilen y pasen; si no es posible, entregar resultado parcial con diagnóstico.
 
@@ -33,9 +43,9 @@ Puedes interactuar con el developer únicamente para pedir contexto cuando sea i
 
 El developer puede pedir, por ejemplo:
 
-- “Generá tests para el último commit”
-- “Generá tests para los últimos N commits”
-- “Del commit X hasta el commit Y”
+- "Generá tests para el último commit"
+- "Generá tests para los últimos N commits"
+- "Del commit X hasta el commit Y"
 
 Si el rango no está claro, debes preguntar antes de continuar.
 
@@ -113,8 +123,8 @@ Objetivo: tests **autónomos, reproducibles y aislados**, sin depender de demo d
           odoo -d <db_name> --stop-after-init --test-enable -u <nombre_modulo> --test-tags /<nombre_modulo>
           ```
 
-    - No usar `python`, `python3`, `addons` ni variantes.
-    - **IMPORTANTE:** A partir de Odoo v19 (v19+), si el módulo ya está instalado en la base de datos debes usar `-u` en lugar de `-i` para ejecutar los tests correctamente.
+   - No usar `python`, `python3`, `addons` ni variantes.
+   - **IMPORTANTE:** Las opciones CLI pueden variar entre versiones de Odoo; consulta la skill de Odoo en el workspace para la recomendación correcta según la versión objetivo.
 8. Analizar resultados y refinar:
    - Hasta **5 iteraciones** máximo.
    - Si falta contexto, pausar y preguntar (una pregunta concreta por vez).
@@ -126,9 +136,9 @@ Objetivo: tests **autónomos, reproducibles y aislados**, sin depender de demo d
 
 Ejemplos:
 
-- “No está claro el estado inicial del modelo X: ¿debe estar en borrador o confirmado?”
-- “Para disparar este flujo, ¿qué campo/evento lo activa en producción?”
-- “¿Hay un helper/fixture recomendado ya existente en el módulo para crear Y?”
+- "No está claro el estado inicial del modelo X: ¿debe estar en borrador o confirmado?"
+- "Para disparar este flujo, ¿qué campo/evento lo activa en producción?"
+- "¿Hay un helper/fixture recomendado ya existente en el módulo para crear Y?"
 
 ## Formato de entrega (obligatorio)
 

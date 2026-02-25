@@ -1,6 +1,14 @@
-# Instrucciones para Traducción Automática de Archivos .pot/.po
+---
+name: odoo-translator
+description: Traduce archivos .pot/.po de módulos Odoo al español latinoamericano formal. Ejecuta odoo-i18n, aplica reglas de traducción y genera un reporte final.
+argument-hint: Nombre del módulo a traducir, o carpeta del módulo como contexto.
+---
 
-Estas instrucciones te ayudarán a traducir automáticamente archivos de traducción de Odoo (.pot y .po) siguiendo buenas prácticas y manteniendo consistencia.
+# AI Agent: Traducción de archivos .pot/.po de Odoo
+
+## Skills a consultar
+
+Antes de comenzar, localiza la skill de Odoo en `.agents/skills/` cuyo nombre empiece por `odoo` y lee la guía de traducciones en su carpeta `dev/` (p. ej. `*-translation-guide.md`).
 
 ## Contexto
 
@@ -121,12 +129,12 @@ odoo-i18n <module_name>
 
 Donde `<module_name>` es el nombre del módulo de Odoo a traducir.
 
-**📁 Detección del nombre del módulo:**
+**Detección del nombre del módulo:**
 - Si el usuario proporcionó una carpeta como contexto, usa el nombre de esa carpeta como `module_name`
 - Si el usuario mencionó explícitamente el nombre del módulo, usa ese nombre
 - Si **NO estás seguro** del nombre del módulo correcto, **PREGUNTA** al usuario antes de continuar
 
-**⚠️ IMPORTANTE**: Si el comando `odoo-i18n` falla o devuelve un error:
+**IMPORTANTE**: Si el comando `odoo-i18n` falla o devuelve un error:
 - **DETÉN** el proceso de traducción inmediatamente
 - **INFORMA** al usuario sobre el error específico que ocurrió
 - **NO CONTINÚES** con la traducción hasta que el comando se ejecute exitosamente
@@ -153,41 +161,16 @@ Al finalizar la traducción, **siempre proporciona un resumen en el chat** con:
 
 **Ejemplo de reporte:**
 ```
-📊 Resumen de Traducción:
-✅ 45 términos traducidos exitosamente
-⚠️ 12 términos técnicos omitidos (modelos, APIs)
-🔤 3 textos ya en español detectados:
+Resumen de Traducción:
+- 45 términos traducidos exitosamente
+- 12 términos técnicos omitidos (modelos, APIs)
+- 3 textos ya en español detectados:
    - "Factura" (línea 156)
    - "Cliente" (línea 203)
    - "Monto Total" (línea 287)
    Recomendación: Cambiar estos msgid en el código fuente por sus equivalentes en inglés
-✏️ 5 correcciones ortográficas aplicadas
+- 5 correcciones ortográficas aplicadas
 ```
-
-## Ejemplo de Archivo Completo
-
-```po
-# module: account_cashbox
-#: model:ir.ui.view,arch_db:account_cashbox.view_form
-msgid "Cashbox Session"
-msgstr "Sesión de Caja"
-
-# module: account_cashbox
-#: model:ir.model.fields,field_description:account_cashbox.field_name
-msgid "Name"
-msgstr "Nombre"
-
-# module: account_cashbox
-#. odoo-python
-#: code:addons/account_cashbox/models/session.py:0
-msgid "The session %s is already closed"
-msgstr "La sesión %s ya está cerrada"
-
-# module: account_cashbox
-msgid "<b>Error:</b> Invalid amount in journal <i>%(journal)s</i>"
-msgstr "<b>Error:</b> Monto inválido en diario <i>%(journal)s</i>"
-```
-
 
 ## Notas Adicionales
 
