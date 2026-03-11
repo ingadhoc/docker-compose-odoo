@@ -38,6 +38,9 @@
           "/home/odoo/src/**" : true,
           "/home/odoo/custom/repositories/src/**" : true
         },
+        "files.associations": {
+          "*.json": "jsonc"
+        },
         "files.exclude": {
             ".devcontainer": true,
             //".vscode": true,
@@ -100,12 +103,14 @@
         "debug.openExplorerOnEnd": true,
         "debug.allowBreakpointsEverywhere": true,
         "debug.hideLauncherWhileDebugging": true,
+        "debug.internalConsoleOptions": "neverOpen",
         "debugpy.showPythonInlineValues": true,
         // "debugpy.debugJustMyCode": false # We don't want this
         // Auto Docstring
         "autoDocstring.guessTypes": true,
         "autoDocstring.docstringFormat": "google",
-        "autoDocstring.generateDocstringOnEnter": true
+        "autoDocstring.generateDocstringOnEnter": true,
+        "extensions.ignoreRecommendations": true
       },
       //Extensions "ms-vscode-remote.vscode-remote-extensionpack"
       "extensions": [
@@ -120,6 +125,11 @@
         "streetsidesoftware.code-spell-checker",
         "njpwerner.autodocstring",
         "trinhanhngoc.vscode-odoo"
+      ],
+      "remote.defaultExtensionsIfInstalledLocally": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "GitHub.vscode-pull-request-github"
       ]
     }
   }

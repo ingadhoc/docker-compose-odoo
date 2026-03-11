@@ -52,6 +52,7 @@ services:
       WAIT_PG: "false"
       ADHOC_ANALYTIC_ACCOUNT: "development"
       ADHOC_DATABASE: "development"
+      KWKHTMLTOPDF_SERVER_URL: "http://kwkhtmltopdf:8080"
     dns:
       # - "8.8.8.8"
       - "172.60.0.10"
