@@ -2,7 +2,9 @@ data/custom/repositories/*
 data/custom/*
 !data/custom/repositories/
 !data/custom/repositories/pyproject.toml
-!data/custom/repositories/agents
+!data/custom/repositories/.github/
+!data/custom/repositories/.github/agents/
+!data/custom/repositories/.github/agents/**
 data/default
 tmp/*
 .devcontainer/.vscode/settings.json
