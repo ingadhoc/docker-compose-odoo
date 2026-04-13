@@ -21,6 +21,46 @@ for app in "/home/odoo/custom/repositories/"*; do
     fi
 done
 
+# Odoo 19+ uses namespace packages (init.py). OLS needs __init__.py
+[ -f /home/odoo/src/odoo/odoo/init.py ] && [ ! -f /home/odoo/src/odoo/odoo/__init__.py ] && \
+    cp /home/odoo/src/odoo/odoo/init.py /home/odoo/src/odoo/odoo/__init__.py
+
+# Generate OdooLS config (odools.toml)
+ODOOLS="/home/odoo/custom/repositories/odools.toml"
+paths=("/home/odoo/src/odoo/addons" "/home/odoo/src/odoo/odoo/addons" "/home/odoo/src/enterprise")
+declare -A seen
+
+# Custom repos first (priority)
+for dir in /home/odoo/custom/repositories/*; do
+    [ -d "$dir" ] || continue
+    name=$(basename "$dir")
+    [[ $name == .* || $name == src* || $name == tmp* ]] && continue
+    find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && { paths+=("$dir"); seen[$name]=1; }
+done
+
+# Src repos (skip if already in custom)
+for dir in /home/odoo/src/repositories/*; do
+    [ -d "$dir" ] || continue
+    name=$(basename "$dir")
+    [ -n "${seen[$name]:-}" ] && continue
+    find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && paths+=("$dir")
+done
+
+{
+    echo '[[config]]'
+    echo 'name = "default"'
+    echo 'odoo_path = "/home/odoo/src/odoo"'
+    echo 'python_path = "/home/odoo/venv/bin/python"'
+    echo 'diag_missing_imports = "only_odoo"'
+    echo 'addons_paths = ['
+    for i in "${!paths[@]}"; do
+        [ "$i" -lt $(( ${#paths[@]} - 1 )) ] && sep=',' || sep=''
+        echo "    \"${paths[$i]}\"$sep"
+    done
+    echo ']'
+} > "$ODOOLS"
+echo "Generated $ODOOLS (${#paths[@]} paths)"
+
 # Odoo skills installation
 adhoc_oba_version(){
     if [ -f "$HOME/ODOO_BY_ADHOC_VERSION" ]; then
