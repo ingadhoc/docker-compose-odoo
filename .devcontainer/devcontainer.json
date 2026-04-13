@@ -91,6 +91,7 @@
         "python.analysis.diagnosticMode": "openFilesOnly",
         "python.analysis.indexing": true,
         "python.analysis.userFileIndexingLimit": -1,
+        "Odoo.serverConfigPath": "/home/odoo/custom/repositories/odools.toml",
         // Spell check
         "cSpell.diagnosticLevel": "Hint",
         "cSpell.diagnosticLevelFlaggedWords":   "Hint",
@@ -124,7 +125,7 @@
         "shardulm94.trailing-spaces",
         "streetsidesoftware.code-spell-checker",
         "njpwerner.autodocstring",
-        "trinhanhngoc.vscode-odoo"
+        "Odoo.odoo"
       ],
       "remote.defaultExtensionsIfInstalledLocally": [
         "GitHub.copilot",
