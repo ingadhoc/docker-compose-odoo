@@ -1,7 +1,22 @@
 #!/bin/bash
 
-# Fix addons paths
 echo "PostStart"
+
+# Get Odoo version
+adhoc_oba_version(){
+    if [ -f "$HOME/ODOO_BY_ADHOC_VERSION" ]; then
+        tr -d '\n' < "$HOME/ODOO_BY_ADHOC_VERSION" | cut -d. -f1
+    fi
+}
+
+ODOO_V="$(adhoc_oba_version)"
+if [ -z "${ODOO_V:-}" ]; then
+    echo "FALLO: no se pudo inferir la versión de Odoo"
+    exit 1
+fi
+echo "Odoo version: $ODOO_V"
+
+# Fix addons paths (symlinks)
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
         app_name=$(basename $app)
@@ -21,61 +36,53 @@ for app in "/home/odoo/custom/repositories/"*; do
     fi
 done
 
-# Odoo 19+ uses namespace packages (init.py). OLS needs __init__.py
-[ -f /home/odoo/src/odoo/odoo/init.py ] && [ ! -f /home/odoo/src/odoo/odoo/__init__.py ] && \
-    cp /home/odoo/src/odoo/odoo/init.py /home/odoo/src/odoo/odoo/__init__.py
+# OdooLS config - only for Odoo 18+
+if [ "$ODOO_V" -ge 18 ] 2>/dev/null; then
+    echo "Configuring OdooLS for Odoo $ODOO_V"
+    # Odoo 19+ uses namespace packages (init.py). OLS needs __init__.py
+    [ -f /home/odoo/src/odoo/odoo/init.py ] && [ ! -f /home/odoo/src/odoo/odoo/__init__.py ] && \
+        cp /home/odoo/src/odoo/odoo/init.py /home/odoo/src/odoo/odoo/__init__.py
 
-# Generate OdooLS config (odools.toml)
-ODOOLS="/home/odoo/custom/repositories/odools.toml"
-paths=("/home/odoo/src/odoo/addons" "/home/odoo/src/odoo/odoo/addons" "/home/odoo/src/enterprise")
-declare -A seen
+    ODOOLS="/home/odoo/custom/repositories/odools.toml"
+    paths=("/home/odoo/src/odoo/addons" "/home/odoo/src/odoo/odoo/addons" "/home/odoo/src/enterprise")
+    declare -A seen
 
-# Custom repos first (priority)
-for dir in /home/odoo/custom/repositories/*; do
-    [ -d "$dir" ] || continue
-    name=$(basename "$dir")
-    [[ $name == .* || $name == src* || $name == tmp* ]] && continue
-    find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && { paths+=("$dir"); seen[$name]=1; }
-done
-
-# Src repos (skip if already in custom)
-for dir in /home/odoo/src/repositories/*; do
-    [ -d "$dir" ] || continue
-    name=$(basename "$dir")
-    [ -n "${seen[$name]:-}" ] && continue
-    find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && paths+=("$dir")
-done
-
-{
-    echo '[[config]]'
-    echo 'name = "default"'
-    echo 'odoo_path = "/home/odoo/src/odoo"'
-    echo 'python_path = "/home/odoo/venv/bin/python"'
-    echo 'diag_missing_imports = "only_odoo"'
-    echo 'addons_paths = ['
-    for i in "${!paths[@]}"; do
-        [ "$i" -lt $(( ${#paths[@]} - 1 )) ] && sep=',' || sep=''
-        echo "    \"${paths[$i]}\"$sep"
+    # Custom repos first (priority)
+    for dir in /home/odoo/custom/repositories/*; do
+        [ -d "$dir" ] || continue
+        name=$(basename "$dir")
+        [[ $name == .* || $name == src* || $name == tmp* ]] && continue
+        find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && { paths+=("$dir"); seen[$name]=1; }
     done
-    echo ']'
-} > "$ODOOLS"
-echo "Generated $ODOOLS (${#paths[@]} paths)"
 
-# Odoo skills installation
-adhoc_oba_version(){
-    if [ -f "$HOME/ODOO_BY_ADHOC_VERSION" ]; then
-        tr -d '\n' < "$HOME/ODOO_BY_ADHOC_VERSION" | cut -d. -f1
-    fi
-}
+    # Src repos (skip if already in custom)
+    for dir in /home/odoo/src/repositories/*; do
+        [ -d "$dir" ] || continue
+        name=$(basename "$dir")
+        [ -n "${seen[$name]:-}" ] && continue
+        find "$dir" -maxdepth 2 -name '__manifest__.py' -print -quit | grep -q . && paths+=("$dir")
+    done
 
-file_ver="$(adhoc_oba_version)"
-
-if [ -z "${file_ver:-}" ]; then
-    echo "FALLO: no se pudo inferir la versión de Odoo"
-    exit 1
+    {
+        echo '[[config]]'
+        echo 'name = "default"'
+        echo 'odoo_path = "/home/odoo/src/odoo"'
+        echo 'python_path = "/home/odoo/venv/bin/python"'
+        echo 'diag_missing_imports = "only_odoo"'
+        echo 'addons_paths = ['
+        for i in "${!paths[@]}"; do
+            [ "$i" -lt $(( ${#paths[@]} - 1 )) ] && sep=',' || sep=''
+            echo "    \"${paths[$i]}\"$sep"
+        done
+        echo ']'
+    } > "$ODOOLS"
+    echo "Generated $ODOOLS (${#paths[@]} paths)"
+else
+    echo "OdooLS no soportado para Odoo $ODOO_V (requiere v18+). Saltando configuración."
 fi
 
-ODOO_V="$file_ver"
+# Odoo skills installation - only for Odoo 18 or 19
+SKILL="odoo-${ODOO_V}"
 SKILL_PATH=".agents/"
 
 # ingadhoc/skills — catálogo interno
@@ -98,7 +105,6 @@ EXTERNAL_SKILLS=(
     "anthropics/skills|skill-creator"
 )
 
-# Only install skills for Odoo 18 or 19
 if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
     echo "No hay 'skills' disponibles para Odoo $ODOO_V. Saltando instalación."
 else
