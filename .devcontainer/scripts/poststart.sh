@@ -36,27 +36,69 @@ if [ -z "${file_ver:-}" ]; then
 fi
 
 ODOO_V="$file_ver"
-SKILL="odoo-${ODOO_V}"
 SKILL_PATH=".agents/"
-REPO_URL="git@github.com:unclecatvn/agent-skills.git"
+
+# ingadhoc/skills — catálogo interno
+INGADHOC_REPO="git@github.com:ingadhoc/skills.git"
+INGADHOC_SKILLS=(
+    "odoo-${ODOO_V}"
+    "odoo-general"
+    "odoo-code-review"
+    "odoo-translator"
+    "odoo-upgrade-migration"
+    "odoo-test-from-commit"
+    "odoo-test-from-video"
+    "odoo-module-generator"
+    "odoo-readme"
+)
+
+# Skills externas (formato "repo|skill"; el separador `|` evita colisionar
+# con `:` presente en URLs SSH como git@github.com:org/repo.git)
+EXTERNAL_SKILLS=(
+    "anthropics/skills|skill-creator"
+)
 
 # Only install skills for Odoo 18 or 19
 if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
     echo "No hay 'skills' disponibles para Odoo $ODOO_V. Saltando instalación."
 else
-    echo "Installing skill $SKILL in $PWD"
+    echo "Installing odoo skills in $PWD"
     LOG_FILE="$PWD/install_skill.log"
+    install_failed=0
 
-    CI=true npx --yes skills add "$REPO_URL" \
-        --skill "$SKILL" \
+    # ingadhoc/skills
+    SKILL_ARGS=()
+    for skill in "${INGADHOC_SKILLS[@]}"; do
+        SKILL_ARGS+=(--skill "$skill")
+    done
+
+    if ! CI=true npx --yes skills add "$INGADHOC_REPO" \
+        "${SKILL_ARGS[@]}" \
         --agent github-copilot \
         --no-interactive \
-        --yes > "$LOG_FILE" 2>&1 || true
+        --yes > "$LOG_FILE" 2>&1; then
+        install_failed=1
+        echo "FALLO: error instalando skills de $INGADHOC_REPO"
+    fi
 
-    if [ -d "$PWD/$SKILL_PATH" ]; then
-        echo "Skill installed."
+    # External skills (formato "repo|skill")
+    for entry in "${EXTERNAL_SKILLS[@]}"; do
+        ext_repo="${entry%%|*}"
+        ext_skill="${entry##*|}"
+        if ! CI=true npx --yes skills add "$ext_repo" \
+            --skill "$ext_skill" \
+            --agent github-copilot \
+            --no-interactive \
+            --yes >> "$LOG_FILE" 2>&1; then
+            install_failed=1
+            echo "FALLO: error instalando skill '$ext_skill' desde $ext_repo"
+        fi
+    done
+
+    if [ "$install_failed" -eq 0 ] && [ -d "$PWD/$SKILL_PATH" ]; then
+        echo "Skills installed."
     else
-        echo "FALLO: no se pudo instalar la skill '$SKILL'. Mostrando últimas líneas del log de instalación:"
+        echo "FALLO: no se pudieron instalar las skills. Mostrando últimas líneas del log de instalación:"
         tail -n 200 "$LOG_FILE" || true
     fi
 
