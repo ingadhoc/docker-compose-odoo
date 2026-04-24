@@ -69,7 +69,7 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // PyLance
+        // Keep PyLance enabled as a fallback when OdooLS is disabled.
         "python.languageServer": "Pylance",
         "python.analysis.languageServerMode": "light",
         "python.analysis.extraPaths": [
