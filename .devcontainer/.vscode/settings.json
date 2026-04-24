@@ -1,0 +1,12 @@
+{
+    "python.languageServer": "Pylance",
+    "cSpell.words": [
+        "isoformat"
+    ],
+"python.analysis.extraPaths": [
+    "/home/odoo/src/odoo",
+    "/home/odoo/src/odoo/odoo/addons"
+],
+"python.analysis.useLibraryCodeForTypes": true,
+"Odoo.selectedProfile": "default"
+}
