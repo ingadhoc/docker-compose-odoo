@@ -95,7 +95,9 @@ mkdir -p \
     "$HOME/.adhoc-devcontainer-auth/shared/.claude" \
     "$HOME/.adhoc-devcontainer-auth/shared/.codex" \
     "$HOME/.adhoc-devcontainer-auth/shared/.gemini" \
-    "$HOME/.adhoc-devcontainer-auth/shared/.agents"
+    "$HOME/.adhoc-devcontainer-auth/shared/.agents" \
+    "$HOME/.adhoc-devcontainer-auth/shared/gh" \
+    "$HOME/odoo-shared"
 # claude.json necesita existir como FILE antes del mount (Docker crearía un dir si no existe)
 if [ ! -f "$HOME/.adhoc-devcontainer-auth/shared/claude.json" ]; then
     echo '{"hasCompletedOnboarding":true,"numStartups":5,"installMethod":"npm","autoUpdates":true}' \
