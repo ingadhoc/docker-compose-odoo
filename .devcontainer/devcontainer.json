@@ -51,7 +51,9 @@
             ".devcontainer": true,
             //".vscode": true,
             ".github": true,
-			      "*.Dockerfile.dockerignore": true
+            "*.Dockerfile.dockerignore": true,
+            ".agents": true,
+            ".claude": true
         },
         "search.exclude": {
           ".devcontainer": true,
