@@ -174,8 +174,7 @@ echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
 
 # CLIs de agentes IA — idempotente (solo instala si no están presentes)
 # Usa ~/.local para evitar permisos de root en /usr/local/lib/node_modules.
-# Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev,
-# sacar este bloque y el mount del harness en devcontainer.json.
+# Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev, sacar este bloque.
 export npm_config_prefix="$HOME/.local"
 install_cli_if_missing() {
     local cmd="$1" pkg="$2"
@@ -347,21 +346,11 @@ else
     rm "$LOG_FILE" || true
 fi
 
-# Capa Workspace — convenciones Adhoc adentro del container
-# Busca el script en custom/harness/ (caso R&D activo: dev tiene clonado harness en custom)
-# y como fallback en .resources/harness/ (mount transitorio pre-bake).
-# Escribe /home/odoo/custom/.adhoc/ y bloque managed en .claude/CLAUDE.md, .codex/AGENTS.md, .gemini/GEMINI.md.
-HARNESS_INSTALL=""
-for candidate in \
-    "$HOME/custom/harness/scripts/harness-install-user.sh" \
-    "$HOME/.resources/harness/scripts/harness-install-user.sh"; do
-    if [ -x "$candidate" ]; then
-        HARNESS_INSTALL="$candidate"
-        break
-    fi
-done
-
-if [ -n "$HARNESS_INSTALL" ]; then
+# Capa Workspace — convenciones Adhoc adentro del container.
+# Requiere harness clonado en data/custom/harness (visible vía bind mount existente).
+# Escribe /home/odoo/.adhoc/ y bloque managed en .claude/CLAUDE.md, .codex/AGENTS.md, .gemini/GEMINI.md.
+HARNESS_INSTALL="$HOME/custom/harness/scripts/harness-install-user.sh"
+if [ -x "$HARNESS_INSTALL" ]; then
     echo "Instalando capa Workspace desde $HARNESS_INSTALL"
     "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Workspace OK."
 
@@ -374,8 +363,8 @@ EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: harness no disponible en custom/harness/ ni .resources/harness/ — capa Workspace no instalada."
-    echo "  Para activarla: clonar harness en data/custom/ o montarlo via docker-compose.override.yml."
+    echo "AVISO: harness no disponible en custom/harness/ — capa Workspace no instalada."
+    echo "  Para activarla: clonar git@github.com:ingadhoc/harness en data/custom/harness."
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
