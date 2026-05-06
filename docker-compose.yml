@@ -13,6 +13,9 @@ services:
       - ${HOME}/.adhoc-devcontainer-auth/shared/.codex:/home/odoo/.codex
       - ${HOME}/.adhoc-devcontainer-auth/shared/.gemini:/home/odoo/.gemini
       - ${HOME}/.adhoc-devcontainer-auth/shared/claude.json:/home/odoo/.claude.json
+      # Workspace curado — debe existir antes de que VS Code lo use como workspaceFolder.
+      # Se crea vacío en init.sh; poststart.sh lo llena con symlinks via build_workspace().
+      - ${HOME}/.adhoc-devcontainer-auth/workspace:/home/odoo/workspace
     labels:
       - traefik.enable=true
       - traefik.docker.network=adhoc
