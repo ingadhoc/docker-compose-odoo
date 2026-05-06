@@ -55,7 +55,7 @@ build_workspace() {
         name=$(basename "$item")
         [[ $name == repositories ]] && continue       # se maneja separado
         [[ ! -d "$item/.git" ]] && continue           # omitir módulos sueltos sin repo git
-        [[ -n "${in_custom[$name]:-}" ]] && continue  # ya en custom/repositories/
+        [[ -n "${in_custom[$name]:-}" || -d "$CUSTOM/$name" ]] && continue  # ya en custom/
         ln -sf "$item" "$CUSTOM/src/$name"
         (( src_count++ )) || true
     done
