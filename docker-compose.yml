@@ -15,6 +15,10 @@ services:
       - ${HOME}/.adhoc-devcontainer-auth/shared/claude.json:/home/odoo/.claude.json
       # Skills github-copilot y agents genéricos — persiste entre rebuilds.
       - ${HOME}/.adhoc-devcontainer-auth/shared/.agents:/home/odoo/.agents
+      # gh CLI — persiste auth entre rebuilds (spec 0012 eje 1)
+      - ${HOME}/.adhoc-devcontainer-auth/shared/gh:/home/odoo/.config/gh
+      # Path canónico host↔container para sharing de archivos (spec 0012 eje 2)
+      - ${HOME}/odoo-shared:/home/odoo/shared
     labels:
       - traefik.enable=true
       - traefik.docker.network=adhoc
