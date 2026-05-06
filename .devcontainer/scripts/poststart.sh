@@ -210,6 +210,115 @@ else
     echo "  Para activarla: montar ~/odoo/harness via docker-compose.override.yml y hacer rebuild."
 fi
 
+# Workspace curado — contexto unificado para el dev y el agente IA
+# Estructura: custom + oba-wiki/specs en raíz; repos OCA en oca/; todo deduplicado (custom tiene prioridad).
+# Odoo y Enterprise quedan fuera por defecto (referencia, no producto); disponibles con workspace-add.
+build_workspace() {
+    local WS="$HOME/workspace"
+    local CUSTOM_REPOS="$HOME/custom/repositories"
+    local SRC_REPOS="$HOME/src/repositories"
+    local RESOURCES="$HOME/.resources"
+    local CUSTOM="$HOME/custom"
+
+    mkdir -p "$WS" "$WS/oca"
+
+    # .vscode: symlink al del workspace actual para que VS Code lo encuentre
+    [[ -e "$WS/.vscode" ]] || ln -sf "$CUSTOM_REPOS/.vscode" "$WS/.vscode"
+
+    # Rastrear repos en custom para deduplicar contra baked
+    declare -A in_custom
+    for repo in "$CUSTOM_REPOS"/*/; do
+        [[ -d "$repo" ]] || continue
+        name=$(basename "$repo")
+        [[ $name == .* || $name == src || $name == tmp* ]] && continue
+        in_custom[$name]=1
+        [[ -e "$WS/$name" ]] || ln -sf "$repo" "$WS/$name"
+    done
+
+    # oba-wiki y oba-specs
+    [[ -d "$RESOURCES/oba-wiki" && ! -e "$WS/oba-wiki" ]] && ln -sf "$RESOURCES/oba-wiki" "$WS/oba-wiki"
+    [[ -d "$CUSTOM/oba-specs"  && ! -e "$WS/oba-specs"  ]] && ln -sf "$CUSTOM/oba-specs"  "$WS/oba-specs"
+
+    # Repos baked NOT en custom: oca-* → oca/, resto → raíz
+    if [[ -d "$SRC_REPOS" ]]; then
+        for repo in "$SRC_REPOS"/*/; do
+            [[ -d "$repo" ]] || continue
+            name=$(basename "$repo")
+            [[ -n "${in_custom[$name]:-}" ]] && continue
+            if [[ $name == oca-* ]]; then
+                [[ -e "$WS/oca/$name" ]] || ln -sf "$repo" "$WS/oca/$name"
+            else
+                [[ -e "$WS/$name" ]] || ln -sf "$repo" "$WS/$name"
+            fi
+        done
+    fi
+
+    local root_count oca_count
+    root_count=$(find "$WS" -maxdepth 1 -mindepth 1 ! -name '.vscode' ! -name 'oca' | wc -l)
+    oca_count=$(find "$WS/oca" -maxdepth 1 -mindepth 1 | wc -l)
+    echo "Workspace construido en $WS ($root_count en raíz, $oca_count en oca/)"
+}
+build_workspace
+
+# workspace-add / workspace-rm — comandos para traer/sacar repos del workspace bajo demanda
+WORKSPACE_ADD="$HOME/.local/bin/workspace-add"
+cat > "$WORKSPACE_ADD" <<'SCRIPT'
+#!/bin/bash
+set -e
+name="${1:?Uso: workspace-add <repo-name>}"
+WS="$HOME/workspace"
+SRC_REPOS="$HOME/src/repositories"
+
+# Buscar también en src/ directamente (ej. odoo, enterprise)
+for candidate in "$SRC_REPOS/$name" "$HOME/src/$name"; do
+    if [[ -d "$candidate" ]]; then
+        if [[ $name == oca-* ]]; then
+            target="$WS/oca/$name"
+        else
+            target="$WS/$name"
+        fi
+        if [[ -e "$target" ]]; then
+            echo "Ya está en el workspace: $name"
+        else
+            ln -sf "$candidate" "$target"
+            echo "Agregado: $target → $candidate"
+        fi
+        exit 0
+    fi
+done
+echo "No encontrado: $name"
+echo "Repos disponibles en src/repositories/:"
+ls "$SRC_REPOS" 2>/dev/null
+SCRIPT
+chmod +x "$WORKSPACE_ADD"
+
+WORKSPACE_RM="$HOME/.local/bin/workspace-rm"
+cat > "$WORKSPACE_RM" <<'SCRIPT'
+#!/bin/bash
+set -e
+name="${1:?Uso: workspace-rm <repo-name>}"
+WS="$HOME/workspace"
+CUSTOM_REPOS="$HOME/custom/repositories"
+
+if [[ -d "$CUSTOM_REPOS/$name" ]]; then
+    echo "Error: '$name' es un repo custom — no se puede remover del workspace."
+    exit 1
+fi
+
+removed=0
+for target in "$WS/$name" "$WS/oca/$name"; do
+    if [[ -L "$target" ]]; then
+        rm "$target"
+        echo "Removido: $target"
+        removed=1
+    fi
+done
+[[ $removed -eq 0 ]] && echo "No encontrado en el workspace: $name"
+SCRIPT
+chmod +x "$WORKSPACE_RM"
+
+echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
+
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
     echo "Running in master mode"
     ~/.resources/entrypoint
