@@ -142,6 +142,8 @@ EXTERNAL_SKILLS=(
 if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
     echo "No hay 'skills' disponibles para Odoo $ODOO_V. Saltando instalación."
 else
+    # Skills se instalan en custom/ (no en workspace/ que no es un git repo)
+    cd "$HOME/custom"
     echo "Installing odoo skills in $PWD"
     LOG_FILE="$PWD/install_skill.log"
     install_failed=0
@@ -236,17 +238,19 @@ build_workspace() {
         [[ -e "$WS/$name" ]] || ln -sf "$repo" "$WS/$name"
     done
 
-    # oba-wiki y oba-specs
-    [[ -d "$RESOURCES/oba-wiki" && ! -e "$WS/oba-wiki" ]] && ln -sf "$RESOURCES/oba-wiki" "$WS/oba-wiki"
-    [[ -d "$CUSTOM/oba-specs"  && ! -e "$WS/oba-specs"  ]] && ln -sf "$CUSTOM/oba-specs"  "$WS/oba-specs"
+    # adhoc/ — recursos Adhoc no-addon
+    mkdir -p "$WS/adhoc"
+    [[ -d "$RESOURCES/oba-wiki"   && ! -e "$WS/adhoc/oba-wiki"    ]] && ln -sf "$RESOURCES/oba-wiki"   "$WS/adhoc/oba-wiki"
+    [[ -d "$CUSTOM/oba-specs"     && ! -e "$WS/adhoc/oba-specs"   ]] && ln -sf "$CUSTOM/oba-specs"     "$WS/adhoc/oba-specs"
+    [[ -d "$SRC/odoo-upgrade"     && ! -e "$WS/adhoc/odoo-upgrade" ]] && ln -sf "$SRC/odoo-upgrade"    "$WS/adhoc/odoo-upgrade"
+    [[ -d "$RESOURCES/harness"    && ! -e "$WS/adhoc/harness"     ]] && ln -sf "$RESOURCES/harness"    "$WS/adhoc/harness"
 
     # odoo/ — custom tiene prioridad sobre src (mismo patrón que 400-auto-detect-addons)
     local odoo_src enterprise_src
     odoo_src="$([[ -d $CUSTOM/odoo ]] && echo "$CUSTOM/odoo" || echo "$SRC/odoo")"
     enterprise_src="$([[ -d $CUSTOM/enterprise ]] && echo "$CUSTOM/enterprise" || echo "$SRC/enterprise")"
-    [[ -d "$odoo_src"      && ! -e "$WS/odoo/odoo"        ]] && ln -sf "$odoo_src"      "$WS/odoo/odoo"
-    [[ -d "$enterprise_src" && ! -e "$WS/odoo/enterprise"  ]] && ln -sf "$enterprise_src" "$WS/odoo/enterprise"
-    [[ -d "$SRC/odoo-upgrade" && ! -e "$WS/odoo/odoo-upgrade" ]] && ln -sf "$SRC/odoo-upgrade" "$WS/odoo/odoo-upgrade"
+    [[ -d "$odoo_src"       && ! -e "$WS/odoo/odoo"       ]] && ln -sf "$odoo_src"       "$WS/odoo/odoo"
+    [[ -d "$enterprise_src" && ! -e "$WS/odoo/enterprise" ]] && ln -sf "$enterprise_src" "$WS/odoo/enterprise"
 
     # Repos baked NOT en custom: oca-* → oca/, resto → raíz
     if [[ -d "$SRC_REPOS" ]]; then
@@ -262,8 +266,49 @@ build_workspace() {
         done
     fi
 
+    # Archivos de contexto para agentes IA — estándar harness (AGENTS.md canónico)
+    cat > "$WS/AGENTS.md" <<'EOF'
+# Workspace OBA
+
+Workspace multi-repo de Odoo by Adhoc. Iniciá acá cuando el trabajo involucra más de un
+repo o necesitás contexto del producto completo. Para bugs acotados a un módulo, podés
+iniciar el agente directamente en ese repo (carga el CLAUDE.md local del repo).
+
+## Estructura
+
+- **Raíz:** repos de addons Adhoc (`ingadhoc-*`) + terceros (`bmya-*`, `camptocamp-*`,
+  `plugberry-*`, `odoo-design-themes`). Custom tiene prioridad sobre baked — si el dev
+  tiene el repo en `custom/repositories/`, ese es el que aparece acá.
+- **`adhoc/`:** recursos Adhoc no-addon — `oba-wiki`, `oba-specs`, `odoo-upgrade`, `harness`.
+- **`odoo/`:** Odoo core, Enterprise (custom tiene prioridad sobre baked), odoo-upgrade.
+- **`oca/`:** repos OCA (referencia — excluidos de search/indexación de VS Code pero legibles).
+
+Todos los items son symlinks. El target del symlink indica si es custom o baked:
+`ls -la workspace/<repo>` muestra a dónde apunta.
+
+## Cómo navegar
+
+- **Entender un módulo:** `adhoc/oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md`
+- **Specs del producto OBA:** `adhoc/oba-specs/`
+- **Buscar dónde vive un módulo:** buscá en los repos `ingadhoc-*` de raíz.
+- **Convenciones Adhoc** (commits, PRs, formato de specs): en `~/.claude/CLAUDE.md` —
+  cargado globalmente, no hace falta buscarlo acá.
+EOF
+
+    cat > "$WS/CLAUDE.md" <<'EOF'
+# CLAUDE.md
+
+Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+EOF
+
+    cat > "$WS/GEMINI.md" <<'EOF'
+# GEMINI.md
+
+Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+EOF
+
     local root_count oca_count odoo_count
-    root_count=$(find "$WS" -maxdepth 1 -mindepth 1 ! -name '.vscode' ! -name 'oca' ! -name 'odoo' | wc -l)
+    root_count=$(find "$WS" -maxdepth 1 -mindepth 1 ! -name '.vscode' ! -name 'oca' ! -name 'odoo' ! -name 'adhoc' ! -name '*.md' | wc -l)
     oca_count=$(find "$WS/oca"  -maxdepth 1 -mindepth 1 | wc -l)
     odoo_count=$(find "$WS/odoo" -maxdepth 1 -mindepth 1 | wc -l)
     echo "Workspace construido en $WS ($root_count en raíz, $odoo_count en odoo/, $oca_count en oca/)"
