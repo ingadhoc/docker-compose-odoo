@@ -211,21 +211,22 @@ else
 fi
 
 # Workspace curado — contexto unificado para el dev y el agente IA
-# Estructura: custom + oba-wiki/specs en raíz; repos OCA en oca/; todo deduplicado (custom tiene prioridad).
-# Odoo y Enterprise quedan fuera por defecto (referencia, no producto); disponibles con workspace-add.
+# Estructura: custom + oba-wiki/specs en raíz; odoo/* para odoo/enterprise/odoo-upgrade;
+# repos OCA en oca/; todo deduplicado (custom tiene prioridad sobre baked).
 build_workspace() {
     local WS="$HOME/workspace"
     local CUSTOM_REPOS="$HOME/custom/repositories"
     local SRC_REPOS="$HOME/src/repositories"
     local RESOURCES="$HOME/.resources"
     local CUSTOM="$HOME/custom"
+    local SRC="$HOME/src"
 
-    mkdir -p "$WS" "$WS/oca"
+    mkdir -p "$WS" "$WS/oca" "$WS/odoo"
 
     # .vscode: symlink al del workspace actual para que VS Code lo encuentre
     [[ -e "$WS/.vscode" ]] || ln -sf "$CUSTOM_REPOS/.vscode" "$WS/.vscode"
 
-    # Rastrear repos en custom para deduplicar contra baked
+    # Rastrear repos en custom/repositories para deduplicar contra baked
     declare -A in_custom
     for repo in "$CUSTOM_REPOS"/*/; do
         [[ -d "$repo" ]] || continue
@@ -238,6 +239,14 @@ build_workspace() {
     # oba-wiki y oba-specs
     [[ -d "$RESOURCES/oba-wiki" && ! -e "$WS/oba-wiki" ]] && ln -sf "$RESOURCES/oba-wiki" "$WS/oba-wiki"
     [[ -d "$CUSTOM/oba-specs"  && ! -e "$WS/oba-specs"  ]] && ln -sf "$CUSTOM/oba-specs"  "$WS/oba-specs"
+
+    # odoo/ — custom tiene prioridad sobre src (mismo patrón que 400-auto-detect-addons)
+    local odoo_src enterprise_src
+    odoo_src="$([[ -d $CUSTOM/odoo ]] && echo "$CUSTOM/odoo" || echo "$SRC/odoo")"
+    enterprise_src="$([[ -d $CUSTOM/enterprise ]] && echo "$CUSTOM/enterprise" || echo "$SRC/enterprise")"
+    [[ -d "$odoo_src"      && ! -e "$WS/odoo/odoo"        ]] && ln -sf "$odoo_src"      "$WS/odoo/odoo"
+    [[ -d "$enterprise_src" && ! -e "$WS/odoo/enterprise"  ]] && ln -sf "$enterprise_src" "$WS/odoo/enterprise"
+    [[ -d "$SRC/odoo-upgrade" && ! -e "$WS/odoo/odoo-upgrade" ]] && ln -sf "$SRC/odoo-upgrade" "$WS/odoo/odoo-upgrade"
 
     # Repos baked NOT en custom: oca-* → oca/, resto → raíz
     if [[ -d "$SRC_REPOS" ]]; then
@@ -253,10 +262,11 @@ build_workspace() {
         done
     fi
 
-    local root_count oca_count
-    root_count=$(find "$WS" -maxdepth 1 -mindepth 1 ! -name '.vscode' ! -name 'oca' | wc -l)
-    oca_count=$(find "$WS/oca" -maxdepth 1 -mindepth 1 | wc -l)
-    echo "Workspace construido en $WS ($root_count en raíz, $oca_count en oca/)"
+    local root_count oca_count odoo_count
+    root_count=$(find "$WS" -maxdepth 1 -mindepth 1 ! -name '.vscode' ! -name 'oca' ! -name 'odoo' | wc -l)
+    oca_count=$(find "$WS/oca"  -maxdepth 1 -mindepth 1 | wc -l)
+    odoo_count=$(find "$WS/odoo" -maxdepth 1 -mindepth 1 | wc -l)
+    echo "Workspace construido en $WS ($root_count en raíz, $odoo_count en odoo/, $oca_count en oca/)"
 }
 build_workspace
 

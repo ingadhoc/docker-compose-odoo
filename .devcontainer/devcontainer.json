@@ -41,7 +41,8 @@
         // Ignore files in src directory the workspace
         "files.watcherExclude": {
           "/home/odoo/src/**": true,
-          "/home/odoo/workspace/oca/**": true
+          "/home/odoo/workspace/oca/**": true,
+          "/home/odoo/workspace/odoo/**": true
         },
         "files.associations": {
           "*.json": "jsonc"
@@ -57,7 +58,8 @@
           "dockerfiles": true,
           // ".vscode": true,
           ".github": true,
-          "oca": true
+          "oca": true,
+          "odoo": true
         },
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
@@ -90,7 +92,8 @@
         // "python.linting.pylintArgs":[],
         "python.analysis.exclude": [
           // "**"
-          "/home/odoo/workspace/oca/**"
+          "/home/odoo/workspace/oca/**",
+          "/home/odoo/workspace/odoo/**"
         ],
         "python.analysis.autoSearchPaths": true,
         "python.analysis.diagnosticMode": "openFilesOnly",
