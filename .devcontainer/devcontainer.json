@@ -3,7 +3,7 @@
   "dockerComposeFile": ["../docker-compose.yml"],
   "service": "odoo",
   // "workspaceFolder": "/workspace",
-  "workspaceFolder": "/home/odoo/custom/repositories",
+  "workspaceFolder": "/home/odoo/workspace",
   "mounts": [
     {
       "source": "${localWorkspaceFolder}/.devcontainer/scripts", "target": "/scripts", "type": "bind"
@@ -36,12 +36,12 @@
       "remoteUser": "odoo",
       "settings":{
         "files.insertFinalNewline": true,
-        "terminal.integrated.cwd": "/home/odoo/custom/repositories",
+        "terminal.integrated.cwd": "/home/odoo/workspace",
         "remote.autoForwardPorts": false,
         // Ignore files in src directory the workspace
         "files.watcherExclude": {
-          "/home/odoo/src/**" : true,
-          "/home/odoo/custom/repositories/src/**" : true
+          "/home/odoo/src/**": true,
+          "/home/odoo/workspace/oca/**": true
         },
         "files.associations": {
           "*.json": "jsonc"
@@ -52,11 +52,12 @@
             ".github": true,
 			      "*.Dockerfile.dockerignore": true
         },
-        "search.exclude":{
-			    ".devcontainer": true,
+        "search.exclude": {
+          ".devcontainer": true,
           "dockerfiles": true,
           // ".vscode": true,
-          ".github": true
+          ".github": true,
+          "oca": true
         },
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
@@ -89,8 +90,7 @@
         // "python.linting.pylintArgs":[],
         "python.analysis.exclude": [
           // "**"
-          "/workspace/src/**",
-          "/home/odoo/custom/repositories/src/**"
+          "/home/odoo/workspace/oca/**"
         ],
         "python.analysis.autoSearchPaths": true,
         "python.analysis.diagnosticMode": "openFilesOnly",
