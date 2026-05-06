@@ -223,7 +223,7 @@ build_workspace() {
     local CUSTOM="$HOME/custom"
     local SRC="$HOME/src"
 
-    mkdir -p "$WS" "$WS/oca" "$WS/odoo"
+    mkdir -p "$WS" "$WS/oca" "$WS/odoo" "$WS/adhoc"
 
     # .vscode: symlink al del workspace actual para que VS Code lo encuentre
     [[ -e "$WS/.vscode" ]] || ln -sf "$CUSTOM_REPOS/.vscode" "$WS/.vscode"
@@ -252,7 +252,7 @@ build_workspace() {
     [[ -d "$odoo_src"       && ! -e "$WS/odoo/odoo"       ]] && ln -sf "$odoo_src"       "$WS/odoo/odoo"
     [[ -d "$enterprise_src" && ! -e "$WS/odoo/enterprise" ]] && ln -sf "$enterprise_src" "$WS/odoo/enterprise"
 
-    # Repos baked NOT en custom: oca-* → oca/, resto → raíz
+    # Repos baked NOT en custom: oca-* → oca/, odoo-* → odoo/, resto → raíz
     if [[ -d "$SRC_REPOS" ]]; then
         for repo in "$SRC_REPOS"/*/; do
             [[ -d "$repo" ]] || continue
@@ -260,14 +260,17 @@ build_workspace() {
             [[ -n "${in_custom[$name]:-}" ]] && continue
             if [[ $name == oca-* ]]; then
                 [[ -e "$WS/oca/$name" ]] || ln -sf "$repo" "$WS/oca/$name"
+            elif [[ $name == odoo-* ]]; then
+                [[ -e "$WS/odoo/$name" ]] || ln -sf "$repo" "$WS/odoo/$name"
             else
                 [[ -e "$WS/$name" ]] || ln -sf "$repo" "$WS/$name"
             fi
         done
     fi
 
-    # Archivos de contexto para agentes IA — estándar harness (AGENTS.md canónico)
-    cat > "$WS/AGENTS.md" <<'EOF'
+    # AGENTS.md generado dinámicamente — lista custom vs baked para el agente y el dev
+    {
+        cat <<'HEADER'
 # Workspace OBA
 
 Workspace multi-repo de Odoo by Adhoc. Iniciá acá cuando el trabajo involucra más de un
@@ -276,15 +279,20 @@ iniciar el agente directamente en ese repo (carga el CLAUDE.md local del repo).
 
 ## Estructura
 
-- **Raíz:** repos de addons Adhoc (`ingadhoc-*`) + terceros (`bmya-*`, `camptocamp-*`,
-  `plugberry-*`, `odoo-design-themes`). Custom tiene prioridad sobre baked — si el dev
-  tiene el repo en `custom/repositories/`, ese es el que aparece acá.
+- **Raíz:** repos de addons (`ingadhoc-*`, `bmya-*`, `camptocamp-*`, `plugberry-*`).
+  Custom tiene prioridad sobre baked.
 - **`adhoc/`:** recursos Adhoc no-addon — `oba-wiki`, `oba-specs`, `odoo-upgrade`, `harness`.
-- **`odoo/`:** Odoo core, Enterprise (custom tiene prioridad sobre baked), odoo-upgrade.
+- **`odoo/`:** Odoo core, Enterprise, `odoo-runbot`, `odoo-design-themes` (custom > baked).
 - **`oca/`:** repos OCA (referencia — excluidos de search/indexación de VS Code pero legibles).
 
-Todos los items son symlinks. El target del symlink indica si es custom o baked:
-`ls -la workspace/<repo>` muestra a dónde apunta.
+## Repos en custom (editables, tienen branch activa)
+
+HEADER
+        for name in $(echo "${!in_custom[@]}" | tr ' ' '\n' | sort); do
+            echo "- \`$name\`"
+        done
+
+        cat <<'FOOTER'
 
 ## Cómo navegar
 
@@ -292,8 +300,11 @@ Todos los items son symlinks. El target del symlink indica si es custom o baked:
 - **Specs del producto OBA:** `adhoc/oba-specs/`
 - **Buscar dónde vive un módulo:** buscá en los repos `ingadhoc-*` de raíz.
 - **Convenciones Adhoc** (commits, PRs, formato de specs): en `~/.claude/CLAUDE.md` —
-  cargado globalmente, no hace falta buscarlo acá.
-EOF
+  cargado globalmente.
+- **Agregar un repo al workspace:** `workspace-add <nombre>`
+- **Sacar un repo baked del workspace:** `workspace-rm <nombre>`
+FOOTER
+    } > "$WS/AGENTS.md"
 
     cat > "$WS/CLAUDE.md" <<'EOF'
 # CLAUDE.md
