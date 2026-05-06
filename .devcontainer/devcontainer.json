@@ -56,7 +56,8 @@
             ".claude": true,
             ".codex": true,
             ".gemini": true,
-            ".adhoc": true
+            ".adhoc": true,
+            ".vscode": true
         },
         "search.exclude": {
           ".devcontainer": true,
