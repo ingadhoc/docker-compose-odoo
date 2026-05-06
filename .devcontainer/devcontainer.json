@@ -3,13 +3,14 @@
   "dockerComposeFile": ["../docker-compose.yml"],
   "service": "odoo",
   // "workspaceFolder": "/workspace",
-  "workspaceFolder": "/home/odoo/workspace",
+  // "workspaceFolder": "/home/odoo/custom/repositories",
+  "workspaceFolder": "/home/odoo/custom",
   "mounts": [
     {
       "source": "${localWorkspaceFolder}/.devcontainer/scripts", "target": "/scripts", "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/custom/repositories/.vscode", "type": "bind"
+      "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/custom/.vscode", "type": "bind"
     },
     // Harness — capa Workspace. Transitorio pre-bake; cuando oci-odoo-by-adhoc
     // bakeé harness, reemplazar por el path baked y quitar este mount.
@@ -36,13 +37,13 @@
       "remoteUser": "odoo",
       "settings":{
         "files.insertFinalNewline": true,
-        "terminal.integrated.cwd": "/home/odoo/workspace",
+        "terminal.integrated.cwd": "/home/odoo/custom",
         "remote.autoForwardPorts": false,
         // Ignore files in src directory the workspace
         "files.watcherExclude": {
           "/home/odoo/src/**": true,
-          "/home/odoo/workspace/oca/**": true,
-          "/home/odoo/workspace/odoo/**": true
+          "/home/odoo/custom/src/**": true,
+          "/home/odoo/custom/adhoc/**": true
         },
         "files.associations": {
           "*.json": "jsonc"
@@ -64,8 +65,8 @@
           "dockerfiles": true,
           // ".vscode": true,
           ".github": true,
-          "oca": true,
-          "odoo": true
+          "src": true,
+          "adhoc": true
         },
         // Python Defaults
         "python.defaultInterpreterPath": "/home/odoo/venv/bin/python",
@@ -98,8 +99,8 @@
         // "python.linting.pylintArgs":[],
         "python.analysis.exclude": [
           // "**"
-          "/home/odoo/workspace/oca/**",
-          "/home/odoo/workspace/odoo/**"
+          "/home/odoo/custom/src/**",
+          "/home/odoo/custom/adhoc/**"
         ],
         "python.analysis.autoSearchPaths": true,
         "python.analysis.diagnosticMode": "openFilesOnly",
