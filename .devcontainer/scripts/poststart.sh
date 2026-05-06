@@ -16,6 +16,24 @@ if [ -z "${ODOO_V:-}" ]; then
 fi
 echo "Odoo version: $ODOO_V"
 
+# CLIs de agentes IA — idempotente (solo instala si no están presentes)
+# Usa ~/.local para evitar permisos de root en /usr/local/lib/node_modules.
+# Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev,
+# sacar este bloque y el mount del harness en devcontainer.json.
+export npm_config_prefix="$HOME/.local"
+install_cli_if_missing() {
+    local cmd="$1" pkg="$2"
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Instalando $cmd ($pkg)..."
+        npm install -g "$pkg" --quiet && echo "$cmd instalado." || echo "FALLO: no se pudo instalar $pkg"
+    else
+        echo "$cmd ya presente ($(command -v "$cmd"))."
+    fi
+}
+install_cli_if_missing claude @anthropic-ai/claude-code
+install_cli_if_missing codex @openai/codex
+install_cli_if_missing gemini @google/gemini-cli
+
 # Fix addons paths (symlinks)
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
@@ -112,33 +130,37 @@ else
     LOG_FILE="$PWD/install_skill.log"
     install_failed=0
 
-    # ingadhoc/skills
+    # ingadhoc/skills — instalar para todos los agentes (paridad)
     SKILL_ARGS=()
     for skill in "${INGADHOC_SKILLS[@]}"; do
         SKILL_ARGS+=(--skill "$skill")
     done
 
-    if ! CI=true npx --yes skills add "$INGADHOC_REPO" \
-        "${SKILL_ARGS[@]}" \
-        --agent github-copilot \
-        --no-interactive \
-        --yes > "$LOG_FILE" 2>&1; then
-        install_failed=1
-        echo "FALLO: error instalando skills de $INGADHOC_REPO"
-    fi
-
-    # External skills (formato "repo|skill")
-    for entry in "${EXTERNAL_SKILLS[@]}"; do
-        ext_repo="${entry%%|*}"
-        ext_skill="${entry##*|}"
-        if ! CI=true npx --yes skills add "$ext_repo" \
-            --skill "$ext_skill" \
-            --agent github-copilot \
+    for agent in claude-code codex gemini-cli github-copilot; do
+        if ! CI=true npx --yes skills add "$INGADHOC_REPO" \
+            "${SKILL_ARGS[@]}" \
+            --agent "$agent" \
             --no-interactive \
             --yes >> "$LOG_FILE" 2>&1; then
             install_failed=1
-            echo "FALLO: error instalando skill '$ext_skill' desde $ext_repo"
+            echo "FALLO: error instalando skills de $INGADHOC_REPO para $agent"
         fi
+    done
+
+    # External skills (formato "repo|skill") — todos los agentes
+    for entry in "${EXTERNAL_SKILLS[@]}"; do
+        ext_repo="${entry%%|*}"
+        ext_skill="${entry##*|}"
+        for agent in claude-code codex gemini-cli github-copilot; do
+            if ! CI=true npx --yes skills add "$ext_repo" \
+                --skill "$ext_skill" \
+                --agent "$agent" \
+                --no-interactive \
+                --yes >> "$LOG_FILE" 2>&1; then
+                install_failed=1
+                echo "FALLO: error instalando skill '$ext_skill' desde $ext_repo para $agent"
+            fi
+        done
     done
 
     if [ "$install_failed" -eq 0 ] && [ -d "$PWD/$SKILL_PATH" ]; then
@@ -149,6 +171,27 @@ else
     fi
 
     rm "$LOG_FILE" || true
+fi
+
+# Capa Workspace — convenciones Adhoc adentro del container
+# Requiere harness disponible en /home/odoo/.resources/harness/ (baked o via override-bind).
+# Escribe /home/odoo/custom/.adhoc/ y bloque managed en .claude/CLAUDE.md, .codex/AGENTS.md, .gemini/GEMINI.md.
+HARNESS_INSTALL="$HOME/.resources/harness/scripts/harness-install-user.sh"
+if [ -x "$HARNESS_INSTALL" ]; then
+    echo "Instalando capa Workspace desde $HARNESS_INSTALL"
+    "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Workspace OK."
+
+    # Wrapper refresh-workspace para re-aplicar sin rebuild
+    REFRESH_BIN="$HOME/.local/bin/refresh-workspace"
+    cat > "$REFRESH_BIN" <<EOF
+#!/bin/bash
+exec "$HARNESS_INSTALL" --target "$HOME" "\$@"
+EOF
+    chmod +x "$REFRESH_BIN"
+    echo "refresh-workspace disponible en $REFRESH_BIN"
+else
+    echo "AVISO: harness no disponible en $HOME/.resources/harness/ — capa Workspace no instalada."
+    echo "  Para activarla: montar ~/odoo/harness via docker-compose.override.yml y hacer rebuild."
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then

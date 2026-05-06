@@ -10,6 +10,11 @@
     },
     {
       "source": "${localWorkspaceFolder}/.devcontainer/.vscode", "target": "/home/odoo/custom/repositories/.vscode", "type": "bind"
+    },
+    // Harness — capa Workspace. Transitorio pre-bake; cuando oci-odoo-by-adhoc
+    // bakeé harness, reemplazar por el path baked y quitar este mount.
+    {
+      "source": "${localEnv:HOME}/odoo/harness", "target": "/home/odoo/.resources/harness", "type": "bind"
     }
     // ,"source=${env:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
   ],
