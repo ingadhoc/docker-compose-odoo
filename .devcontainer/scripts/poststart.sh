@@ -22,20 +22,20 @@ rm -rf "$HOME/custom/.claude" "$HOME/custom/.agents"                      # skil
 rm -rf "$HOME/custom/.codex" "$HOME/custom/.gemini"
 rm -f  "$HOME/custom/skills-lock.json"
 
-# Overlay de referencia dentro de custom/ — src/ y adhoc/ con symlinks a repos baked
+# Overlay src/ dentro de custom/ — symlinks a repos baked de la imagen.
 # Los symlinks apuntan a paths internos del container; son válidos solo adentro.
+# Regla de dedup: si custom/<name> existe (repo local o symlink al host), no se monta en src/.
 # Se rebuild completo en cada postCreate para limpiar symlinks stale.
 build_workspace() {
     local CUSTOM="$HOME/custom"
     local CUSTOM_REPOS="$CUSTOM/repositories"
-    local RESOURCES="$HOME/.resources"
     local SRC="$HOME/src"
 
-    # Rebuild desde cero para limpiar symlinks stale (repos movidos o eliminados)
+    # Rebuild desde cero; limpiar también adhoc/ de instalaciones anteriores
     rm -rf "$CUSTOM/src" "$CUSTOM/adhoc"
-    mkdir -p "$CUSTOM/src" "$CUSTOM/adhoc"
+    mkdir -p "$CUSTOM/src"
 
-    # Rastrear repos en custom/repositories para deduplicar contra baked
+    # Rastrear repos en custom/repositories para dedup de src/repositories/
     declare -A in_custom
     for repo in "$CUSTOM_REPOS"/*/; do
         [[ -d "$repo" ]] || continue
@@ -44,11 +44,7 @@ build_workspace() {
         in_custom[$name]=1
     done
 
-    # adhoc/ — recursos Adhoc no-addon (oba-wiki, harness)
-    [[ -d "$RESOURCES/oba-wiki" ]] && ln -sf "$RESOURCES/oba-wiki" "$CUSTOM/adhoc/oba-wiki"
-    [[ -d "$RESOURCES/harness"  ]] && ln -sf "$RESOURCES/harness"  "$CUSTOM/adhoc/harness"
-
-    # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/repositories/
+    # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/
     local src_count=0
     for item in "$SRC"/*/; do
         [[ -d "$item" ]] || continue
@@ -84,9 +80,9 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 ## Estructura
 
 - **`repositories/`:** repos del dev (editables, branch activa).
-- **`src/`:** repos de la imagen no en repositories/ (referencia, symlinks de container).
-  - `src/repositories/`: repos baked no en repositories/.
-- **`adhoc/`:** recursos Adhoc — oba-wiki, harness.
+- **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
+  - `src/repositories/`: repos baked no en `repositories/`.
+  - Repos como `harness` u `oba-wiki` aparecen acá si no los tenés en `custom/` directamente.
 
 ## Repos del dev en repositories/
 
@@ -98,7 +94,7 @@ HEADER
 
 ## Cómo navegar
 
-- **Entender un módulo:** `adhoc/oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md`
+- **Wiki del módulo:** `oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md` (en `custom/` o `src/`)
 - **Convenciones Adhoc:** en `~/.claude/CLAUDE.md` (cargado globalmente).
 - **Traer repo baked al workspace:** `workspace-add <nombre>`
 - **Sacarlo:** `workspace-rm <nombre>`
@@ -114,7 +110,7 @@ EOF
 Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
 EOF
 
-    echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/) y custom/adhoc/"
+    echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
 }
 build_workspace
 
@@ -163,7 +159,7 @@ if [[ -d "$CUSTOM/repositories/$name" ]]; then
 fi
 
 removed=0
-for target in "$CUSTOM/src/$name" "$CUSTOM/src/repositories/$name"; do
+for target in "$CUSTOM/src/$name" "$CUSTOM/src/repositories/$name" "$CUSTOM/adhoc/$name"; do
     if [[ -L "$target" ]]; then
         rm "$target"
         echo "Removido: $target"
