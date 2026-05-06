@@ -88,6 +88,20 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
 
 fi
 
+# Auth de CLIs de agentes — crear dirs host-side antes de levantar el container.
+# Docker crearía los dirs como root si no existen; esto los crea como el user actual.
+# Ver spec 0006 (eje 2) en harness.
+mkdir -p \
+    "$HOME/.adhoc-devcontainer-auth/shared/.claude" \
+    "$HOME/.adhoc-devcontainer-auth/shared/.codex" \
+    "$HOME/.adhoc-devcontainer-auth/shared/.gemini"
+# claude.json necesita existir como FILE antes del mount (Docker crearía un dir si no existe)
+if [ ! -f "$HOME/.adhoc-devcontainer-auth/shared/claude.json" ]; then
+    echo '{"hasCompletedOnboarding":true,"numStartups":5,"installMethod":"npm","autoUpdates":true}' \
+        > "$HOME/.adhoc-devcontainer-auth/shared/claude.json"
+fi
+echo "Auth dirs listos: $HOME/.adhoc-devcontainer-auth/shared/"
+
 echo "Binding directory"
 docker rm -f odoo-${ODOO_V} 2> /dev/null
 rm -f "$SCRIPT_DIR/data/default" 2> /dev/null

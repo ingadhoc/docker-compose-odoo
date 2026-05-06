@@ -1,0 +1,14 @@
+services:
+  odoo:
+    volumes:
+      # Override opcional para R&D activo de harness y oba-wiki.
+      # Pisa la versión baked en la imagen (cuando esté bakeada; sirve también
+      # como mecanismo transitorio pre-bake).
+      # Modo rw: permite editar y comitear desde adentro del container usando
+      # las CLIs de agentes ya autenticadas.
+      # Caveat: no mezclar commits host/container sin convención clara.
+      #
+      # Activar: cp docker-compose.override.yml.example docker-compose.override.yml
+      # y descomentar los repos que querés montar.
+      # - ${HOME}/odoo/harness:/home/odoo/.resources/harness
+      # - ${HOME}/odoo/oba-wiki:/home/odoo/.resources/oba-wiki

@@ -7,6 +7,12 @@ services:
       - ./data/custom:/home/odoo/custom
       # - default:/home/odoo/src
       - odoo_data:/home/odoo/data
+      # Auth de CLIs de agentes — persiste entre rebuilds del devcontainer.
+      # El dir se crea con mkdir -p en init.sh. Ver spec 0006 (eje 2).
+      - ${HOME}/.adhoc-devcontainer-auth/shared/.claude:/home/odoo/.claude
+      - ${HOME}/.adhoc-devcontainer-auth/shared/.codex:/home/odoo/.codex
+      - ${HOME}/.adhoc-devcontainer-auth/shared/.gemini:/home/odoo/.gemini
+      - ${HOME}/.adhoc-devcontainer-auth/shared/claude.json:/home/odoo/.claude.json
     labels:
       - traefik.enable=true
       - traefik.docker.network=adhoc
