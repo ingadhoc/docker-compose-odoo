@@ -348,10 +348,20 @@ else
 fi
 
 # Capa Workspace — convenciones Adhoc adentro del container
-# Requiere harness disponible en /home/odoo/.resources/harness/ (baked o via override-bind).
+# Busca el script en custom/harness/ (caso R&D activo: dev tiene clonado harness en custom)
+# y como fallback en .resources/harness/ (mount transitorio pre-bake).
 # Escribe /home/odoo/custom/.adhoc/ y bloque managed en .claude/CLAUDE.md, .codex/AGENTS.md, .gemini/GEMINI.md.
-HARNESS_INSTALL="$HOME/.resources/harness/scripts/harness-install-user.sh"
-if [ -x "$HARNESS_INSTALL" ]; then
+HARNESS_INSTALL=""
+for candidate in \
+    "$HOME/custom/harness/scripts/harness-install-user.sh" \
+    "$HOME/.resources/harness/scripts/harness-install-user.sh"; do
+    if [ -x "$candidate" ]; then
+        HARNESS_INSTALL="$candidate"
+        break
+    fi
+done
+
+if [ -n "$HARNESS_INSTALL" ]; then
     echo "Instalando capa Workspace desde $HARNESS_INSTALL"
     "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Workspace OK."
 
@@ -364,8 +374,8 @@ EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: harness no disponible en $HOME/.resources/harness/ — capa Workspace no instalada."
-    echo "  Para activarla: montar ~/odoo/harness via docker-compose.override.yml y hacer rebuild."
+    echo "AVISO: harness no disponible en custom/harness/ ni .resources/harness/ — capa Workspace no instalada."
+    echo "  Para activarla: clonar harness en data/custom/ o montarlo via docker-compose.override.yml."
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
