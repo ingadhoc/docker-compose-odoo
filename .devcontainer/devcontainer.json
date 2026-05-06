@@ -53,7 +53,10 @@
             ".github": true,
             "*.Dockerfile.dockerignore": true,
             ".agents": true,
-            ".claude": true
+            ".claude": true,
+            ".codex": true,
+            ".gemini": true,
+            ".adhoc": true
         },
         "search.exclude": {
           ".devcontainer": true,
