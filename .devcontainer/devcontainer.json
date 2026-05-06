@@ -130,7 +130,8 @@
         "shardulm94.trailing-spaces",
         "streetsidesoftware.code-spell-checker",
         "njpwerner.autodocstring",
-        "Odoo.odoo"
+        "Odoo.odoo",
+        "zaaack.markdown-editor"
       ],
       "remote.defaultExtensionsIfInstalledLocally": [
         "GitHub.copilot",

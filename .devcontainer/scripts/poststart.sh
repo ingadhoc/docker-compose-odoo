@@ -34,6 +34,22 @@ install_cli_if_missing claude @anthropic-ai/claude-code
 install_cli_if_missing codex @openai/codex
 install_cli_if_missing gemini @google/gemini-cli
 
+# gh CLI — binario directo (no está en npm). Transitorio pre-bake.
+if ! command -v gh &>/dev/null; then
+    echo "Instalando gh CLI..."
+    GH_VERSION=$(curl -sf https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | sed 's/v//')
+    if [ -n "$GH_VERSION" ]; then
+        curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+            | tar xz -C /tmp && \
+            mv "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HOME/.local/bin/" && \
+            echo "gh $GH_VERSION instalado." || echo "FALLO: no se pudo instalar gh"
+    else
+        echo "FALLO: no se pudo obtener la versión de gh desde GitHub API"
+    fi
+else
+    echo "gh ya presente ($(command -v gh))."
+fi
+
 # Fix addons paths (symlinks)
 for app in "/home/odoo/custom/repositories/"*; do
     if [[ -d $app ]]; then
