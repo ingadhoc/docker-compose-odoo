@@ -16,6 +16,166 @@ if [ -z "${ODOO_V:-}" ]; then
 fi
 echo "Odoo version: $ODOO_V"
 
+# Limpieza de artefactos de versiones anteriores del setup
+rm -rf "$HOME/workspace"                                                   # viejo workspace dir
+rm -rf "$HOME/custom/.claude" "$HOME/custom/.agents"                      # skills instaladas en custom/ por error
+rm -rf "$HOME/custom/.codex" "$HOME/custom/.gemini"
+rm -f  "$HOME/custom/skills-lock.json"
+
+# Overlay de referencia dentro de custom/ — src/ y adhoc/ con symlinks a repos baked
+# Los symlinks apuntan a paths internos del container; son válidos solo adentro.
+# Se rebuild completo en cada postCreate para limpiar symlinks stale.
+build_workspace() {
+    local CUSTOM="$HOME/custom"
+    local CUSTOM_REPOS="$CUSTOM/repositories"
+    local RESOURCES="$HOME/.resources"
+    local SRC="$HOME/src"
+
+    # Rebuild desde cero para limpiar symlinks stale (repos movidos o eliminados)
+    rm -rf "$CUSTOM/src" "$CUSTOM/adhoc"
+    mkdir -p "$CUSTOM/src" "$CUSTOM/adhoc"
+
+    # Rastrear repos en custom/repositories para deduplicar contra baked
+    declare -A in_custom
+    for repo in "$CUSTOM_REPOS"/*/; do
+        [[ -d "$repo" ]] || continue
+        name=$(basename "$repo")
+        [[ $name == .* || $name == src || $name == tmp* ]] && continue
+        in_custom[$name]=1
+    done
+
+    # adhoc/ — recursos Adhoc no-addon (oba-wiki, harness)
+    [[ -d "$RESOURCES/oba-wiki" ]] && ln -sf "$RESOURCES/oba-wiki" "$CUSTOM/adhoc/oba-wiki"
+    [[ -d "$RESOURCES/harness"  ]] && ln -sf "$RESOURCES/harness"  "$CUSTOM/adhoc/harness"
+
+    # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/repositories/
+    local src_count=0
+    for item in "$SRC"/*/; do
+        [[ -d "$item" ]] || continue
+        name=$(basename "$item")
+        [[ $name == repositories ]] && continue       # se maneja separado
+        [[ ! -d "$item/.git" ]] && continue           # omitir módulos sueltos sin repo git
+        [[ -n "${in_custom[$name]:-}" ]] && continue  # ya en custom/repositories/
+        ln -sf "$item" "$CUSTOM/src/$name"
+        (( src_count++ )) || true
+    done
+
+    # src/repositories/ — repos baked no en custom/repositories/
+    local repo_count=0
+    if [[ -d "$SRC/repositories" ]]; then
+        mkdir -p "$CUSTOM/src/repositories"
+        for repo in "$SRC/repositories"/*/; do
+            [[ -d "$repo" ]] || continue
+            name=$(basename "$repo")
+            [[ -n "${in_custom[$name]:-}" ]] && continue
+            ln -sf "$repo" "$CUSTOM/src/repositories/$name"
+            (( repo_count++ )) || true
+        done
+    fi
+
+    # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar harness)
+    {
+        cat <<'HEADER'
+# Workspace OBA
+
+Iniciá `claude`, `codex` o `gemini` desde `/home/odoo/custom/` para trabajo cross-repo.
+Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
+
+## Estructura
+
+- **`repositories/`:** repos del dev (editables, branch activa).
+- **`src/`:** repos de la imagen no en repositories/ (referencia, symlinks de container).
+  - `src/repositories/`: repos baked no en repositories/.
+- **`adhoc/`:** recursos Adhoc — oba-wiki, harness.
+
+## Repos del dev en repositories/
+
+HEADER
+        for name in $(echo "${!in_custom[@]}" | tr ' ' '\n' | sort); do
+            echo "- \`$name\`"
+        done
+        cat <<'FOOTER'
+
+## Cómo navegar
+
+- **Entender un módulo:** `adhoc/oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md`
+- **Convenciones Adhoc:** en `~/.claude/CLAUDE.md` (cargado globalmente).
+- **Traer repo baked al workspace:** `workspace-add <nombre>`
+- **Sacarlo:** `workspace-rm <nombre>`
+FOOTER
+    } > "$CUSTOM/AGENTS.md"
+
+    cat > "$CUSTOM/CLAUDE.md" <<'EOF'
+# CLAUDE.md
+Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+EOF
+    cat > "$CUSTOM/GEMINI.md" <<'EOF'
+# GEMINI.md
+Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+EOF
+
+    echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/) y custom/adhoc/"
+}
+build_workspace
+
+# workspace-add / workspace-rm — comandos para traer/sacar repos de src/ bajo demanda
+WORKSPACE_ADD="$HOME/.local/bin/workspace-add"
+cat > "$WORKSPACE_ADD" <<'SCRIPT'
+#!/bin/bash
+set -e
+name="${1:?Uso: workspace-add <repo-name>}"
+CUSTOM="$HOME/custom"
+SRC="$HOME/src"
+
+if [[ -d "$SRC/$name" ]]; then
+    candidate="$SRC/$name"
+    target="$CUSTOM/src/$name"
+elif [[ -d "$SRC/repositories/$name" ]]; then
+    mkdir -p "$CUSTOM/src/repositories"
+    candidate="$SRC/repositories/$name"
+    target="$CUSTOM/src/repositories/$name"
+else
+    echo "No encontrado: $name"
+    echo "Repos en src/: $(ls "$SRC" 2>/dev/null | tr '\n' ' ')"
+    echo "Repos en src/repositories/: $(ls "$SRC/repositories" 2>/dev/null | tr '\n' ' ')"
+    exit 1
+fi
+
+if [[ -e "$target" ]]; then
+    echo "Ya está: $name"
+else
+    ln -sf "$candidate" "$target"
+    echo "Agregado: $target"
+fi
+SCRIPT
+chmod +x "$WORKSPACE_ADD"
+
+WORKSPACE_RM="$HOME/.local/bin/workspace-rm"
+cat > "$WORKSPACE_RM" <<'SCRIPT'
+#!/bin/bash
+set -e
+name="${1:?Uso: workspace-rm <repo-name>}"
+CUSTOM="$HOME/custom"
+
+if [[ -d "$CUSTOM/repositories/$name" ]]; then
+    echo "Error: '$name' es un repo del dev — no se puede remover."
+    exit 1
+fi
+
+removed=0
+for target in "$CUSTOM/src/$name" "$CUSTOM/src/repositories/$name"; do
+    if [[ -L "$target" ]]; then
+        rm "$target"
+        echo "Removido: $target"
+        removed=1
+    fi
+done
+[[ $removed -eq 0 ]] && echo "No encontrado en src/: $name"
+SCRIPT
+chmod +x "$WORKSPACE_RM"
+
+echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
+
 # CLIs de agentes IA — idempotente (solo instala si no están presentes)
 # Usa ~/.local para evitar permisos de root en /usr/local/lib/node_modules.
 # Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev,
@@ -211,178 +371,6 @@ else
     echo "AVISO: harness no disponible en $HOME/.resources/harness/ — capa Workspace no instalada."
     echo "  Para activarla: montar ~/odoo/harness via docker-compose.override.yml y hacer rebuild."
 fi
-
-# Limpieza de artefactos de versiones anteriores del setup
-rm -rf "$HOME/workspace"                                                   # viejo workspace dir
-rm -rf "$HOME/custom/.claude" "$HOME/custom/.agents"                      # skills instaladas en custom/ por error
-rm -rf "$HOME/custom/.codex" "$HOME/custom/.gemini"
-rm -f  "$HOME/custom/skills-lock.json"
-
-# Overlay de referencia dentro de custom/ — src/ y adhoc/ con symlinks a repos baked
-# Los symlinks apuntan a paths internos del container; son válidos solo adentro.
-# Se rebuild completo en cada postCreate para limpiar symlinks stale.
-build_workspace() {
-    local CUSTOM="$HOME/custom"
-    local CUSTOM_REPOS="$CUSTOM/repositories"
-    local SRC_REPOS="$HOME/src/repositories"
-    local RESOURCES="$HOME/.resources"
-    local SRC="$HOME/src"
-
-    # Rebuild desde cero para limpiar symlinks stale (repos movidos o eliminados)
-    rm -rf "$CUSTOM/src" "$CUSTOM/adhoc"
-    mkdir -p "$CUSTOM/src/oca" "$CUSTOM/src/odoo" "$CUSTOM/adhoc"
-
-    # Rastrear repos en custom/repositories para deduplicar contra baked
-    declare -A in_custom
-    for repo in "$CUSTOM_REPOS"/*/; do
-        [[ -d "$repo" ]] || continue
-        name=$(basename "$repo")
-        [[ $name == .* || $name == src || $name == tmp* ]] && continue
-        in_custom[$name]=1
-    done
-
-    # adhoc/ — recursos Adhoc no-addon (oba-wiki, harness, odoo-upgrade)
-    [[ -d "$RESOURCES/oba-wiki"  ]] && ln -sf "$RESOURCES/oba-wiki"  "$CUSTOM/adhoc/oba-wiki"
-    [[ -d "$RESOURCES/harness"   ]] && ln -sf "$RESOURCES/harness"   "$CUSTOM/adhoc/harness"
-    [[ -d "$SRC/odoo-upgrade"    ]] && ln -sf "$SRC/odoo-upgrade"    "$CUSTOM/adhoc/odoo-upgrade"
-
-    # src/odoo/ — odoo y enterprise (custom > baked) + repos odoo-* baked
-    local odoo_src enterprise_src
-    odoo_src="$([[ -d $CUSTOM/odoo ]] && echo "$CUSTOM/odoo" || echo "$SRC/odoo")"
-    enterprise_src="$([[ -d $CUSTOM/enterprise ]] && echo "$CUSTOM/enterprise" || echo "$SRC/enterprise")"
-    [[ -d "$odoo_src"       ]] && ln -sf "$odoo_src"       "$CUSTOM/src/odoo/odoo"
-    [[ -d "$enterprise_src" ]] && ln -sf "$enterprise_src" "$CUSTOM/src/odoo/enterprise"
-    if [[ -d "$SRC_REPOS" ]]; then
-        for repo in "$SRC_REPOS"/odoo-*/; do
-            [[ -d "$repo" ]] || continue
-            ln -sf "$repo" "$CUSTOM/src/odoo/$(basename "$repo")"
-        done
-    fi
-
-    # src/ — repos baked no en custom: oca-* → src/oca/, odoo-* → src/odoo/ (ya hecho), resto → src/
-    if [[ -d "$SRC_REPOS" ]]; then
-        for repo in "$SRC_REPOS"/*/; do
-            [[ -d "$repo" ]] || continue
-            name=$(basename "$repo")
-            [[ -n "${in_custom[$name]:-}" ]] && continue
-            if [[ $name == oca-* ]]; then
-                ln -sf "$repo" "$CUSTOM/src/oca/$name"
-            elif [[ $name == odoo-* ]]; then
-                : # ya en src/odoo/
-            else
-                ln -sf "$repo" "$CUSTOM/src/$name"
-            fi
-        done
-    fi
-
-    # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar harness)
-    {
-        cat <<'HEADER'
-# Workspace OBA
-
-Iniciá `claude`, `codex` o `gemini` desde `/home/odoo/custom/` para trabajo cross-repo.
-Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
-
-## Estructura
-
-- **`repositories/`:** repos del dev (editables, branch activa).
-- **`oba-specs/`:** specs del producto OBA.
-- **`src/`:** repos baked de la imagen no en repositories/ (referencia, symlinks de container).
-  - `src/odoo/`: odoo, enterprise, odoo-runbot, odoo-design-themes.
-  - `src/oca/`: repos OCA.
-- **`adhoc/`:** recursos Adhoc — oba-wiki, harness, odoo-upgrade.
-
-## Repos del dev en repositories/
-
-HEADER
-        for name in $(echo "${!in_custom[@]}" | tr ' ' '\n' | sort); do
-            echo "- \`$name\`"
-        done
-        cat <<'FOOTER'
-
-## Cómo navegar
-
-- **Entender un módulo:** `adhoc/oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md`
-- **Specs del producto OBA:** `oba-specs/`
-- **Convenciones Adhoc:** en `~/.claude/CLAUDE.md` (cargado globalmente).
-- **Traer repo baked al workspace:** `workspace-add <nombre>`
-- **Sacarlo:** `workspace-rm <nombre>`
-FOOTER
-    } > "$CUSTOM/AGENTS.md"
-
-    cat > "$CUSTOM/CLAUDE.md" <<'EOF'
-# CLAUDE.md
-Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
-EOF
-    cat > "$CUSTOM/GEMINI.md" <<'EOF'
-# GEMINI.md
-Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
-EOF
-
-    local src_count oca_count
-    src_count=$(find "$CUSTOM/src" -maxdepth 1 -mindepth 1 ! -name 'oca' ! -name 'odoo' | wc -l)
-    oca_count=$(find "$CUSTOM/src/oca" -maxdepth 1 -mindepth 1 | wc -l)
-    echo "Overlay construido: custom/src/ ($src_count repos + $oca_count OCA) y custom/adhoc/"
-}
-build_workspace
-
-# workspace-add / workspace-rm — comandos para traer/sacar repos de src/ bajo demanda
-WORKSPACE_ADD="$HOME/.local/bin/workspace-add"
-cat > "$WORKSPACE_ADD" <<'SCRIPT'
-#!/bin/bash
-set -e
-name="${1:?Uso: workspace-add <repo-name>}"
-CUSTOM="$HOME/custom"
-SRC_REPOS="$HOME/src/repositories"
-
-for candidate in "$SRC_REPOS/$name" "$HOME/src/$name"; do
-    if [[ -d "$candidate" ]]; then
-        if [[ $name == oca-* ]]; then
-            target="$CUSTOM/src/oca/$name"
-        elif [[ $name == odoo-* ]]; then
-            target="$CUSTOM/src/odoo/$name"
-        else
-            target="$CUSTOM/src/$name"
-        fi
-        if [[ -e "$target" ]]; then
-            echo "Ya está: $name"
-        else
-            ln -sf "$candidate" "$target"
-            echo "Agregado: $target"
-        fi
-        exit 0
-    fi
-done
-echo "No encontrado: $name"
-ls "$SRC_REPOS" 2>/dev/null
-SCRIPT
-chmod +x "$WORKSPACE_ADD"
-
-WORKSPACE_RM="$HOME/.local/bin/workspace-rm"
-cat > "$WORKSPACE_RM" <<'SCRIPT'
-#!/bin/bash
-set -e
-name="${1:?Uso: workspace-rm <repo-name>}"
-CUSTOM="$HOME/custom"
-
-if [[ -d "$CUSTOM/repositories/$name" ]]; then
-    echo "Error: '$name' es un repo del dev — no se puede remover."
-    exit 1
-fi
-
-removed=0
-for target in "$CUSTOM/src/$name" "$CUSTOM/src/oca/$name" "$CUSTOM/src/odoo/$name"; do
-    if [[ -L "$target" ]]; then
-        rm "$target"
-        echo "Removido: $target"
-        removed=1
-    fi
-done
-[[ $removed -eq 0 ]] && echo "No encontrado en src/: $name"
-SCRIPT
-chmod +x "$WORKSPACE_RM"
-
-echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
     echo "Running in master mode"
