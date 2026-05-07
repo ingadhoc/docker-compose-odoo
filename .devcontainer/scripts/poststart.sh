@@ -277,21 +277,30 @@ SKILL_PATH=".agents/"
 # ingadhoc/skills — catálogo interno
 INGADHOC_REPO="git@github.com:ingadhoc/skills.git"
 INGADHOC_SKILLS=(
+    # Odoo dev core
     "odoo-${ODOO_V}"
     "odoo-general"
-    "odoo-code-review"
+    "odoo-review"               # antes: odoo-code-review (rota silenciosa)
     "odoo-translator"
     "odoo-upgrade-migration"
     "odoo-test-from-commit"
     "odoo-test-from-video"
     "odoo-module-generator"
-    "odoo-readme"
+    "odoo-auto-readme"          # antes: odoo-readme (rota silenciosa)
+    "odoo-commit-explainer"     # mensajes de commit Odoo-style
+    "odoo-video-to-docs"        # docs desde video — alto uso real (Academy)
+    # SDD / specs
+    "product-sdd"
+    # Universales del ecosistema
+    "harness-bootstrap"         # bootstrap de repo nuevo con patrón harness
+    "adhoc-pr-flow"             # detecta caso PR (4 casos post-ADR 0014) y ejecuta
 )
 
 # Skills externas (formato "repo|skill"; el separador `|` evita colisionar
 # con `:` presente en URLs SSH como git@github.com:org/repo.git)
 EXTERNAL_SKILLS=(
     "anthropics/skills|skill-creator"
+    "vercel-labs/skills|find-skills"      # descubrimiento de skills, recomendado por ingadhoc/skills
 )
 
 if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
