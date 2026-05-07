@@ -401,7 +401,8 @@ else
 fi
 
 # Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
-# Requiere harness clonado en data/custom/harness (visible vía bind mount existente).
+# Requiere harness clonado en data/custom/ingadhoc-harness/ (convención de
+# prefijo ingadhoc- para repos de la org).
 # - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
 #   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
 # - Capa Workspace (--target $HOME/custom --workspace-block-only): bloque
@@ -409,7 +410,7 @@ fi
 #   inyectado al final del AGENTS.md que generó build_workspace. NO toca
 #   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
 #   Spec 0012 Eje 3.
-HARNESS_INSTALL="$HOME/custom/harness/scripts/harness-install-user.sh"
+HARNESS_INSTALL="$HOME/custom/ingadhoc-harness/scripts/harness-install-user.sh"
 if [ -x "$HARNESS_INSTALL" ]; then
     echo "Instalando capa Usuario desde $HARNESS_INSTALL (target=\$HOME)"
     "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
@@ -430,8 +431,8 @@ EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: harness no disponible en custom/harness/ — capa Usuario/Workspace no instaladas."
-    echo "  Para activarlas: clonar git@github.com:ingadhoc/harness en data/custom/harness."
+    echo "AVISO: harness no disponible en custom/ingadhoc-harness/ — capa Usuario/Workspace no instaladas."
+    echo "  Para activarlas: clonar git@github.com:ingadhoc/harness en data/custom/ingadhoc-harness."
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
