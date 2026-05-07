@@ -435,6 +435,48 @@ else
     echo "  Para activarlas: clonar git@github.com:ingadhoc/harness en data/custom/ingadhoc-harness."
 fi
 
+# Allow-list base de Claude Code (operaciones read-only) — reduce prompts
+# durante demos / análisis. Idempotente: solo escribe si no existe el archivo.
+# Si el dev tiene un settings.json propio, lo respeta.
+# A futuro esto se promueve al template managed del harness (item ROADMAP).
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+if [ ! -f "$CLAUDE_SETTINGS" ]; then
+    mkdir -p "$(dirname "$CLAUDE_SETTINGS")"
+    cat > "$CLAUDE_SETTINGS" <<'JSON'
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(tree:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(pwd)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote:*)",
+      "Bash(git ls-files:*)"
+    ]
+  }
+}
+JSON
+    echo "Allow-list base de Claude Code instalada en $CLAUDE_SETTINGS"
+else
+    echo "Claude Code settings.json ya existe — respeto config propia ($CLAUDE_SETTINGS)"
+fi
+
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
     echo "Running in master mode"
     ~/.resources/entrypoint
