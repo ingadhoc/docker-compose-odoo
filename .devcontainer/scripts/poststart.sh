@@ -44,15 +44,16 @@ build_workspace() {
         in_custom[$name]=1
     done
 
-    # Repos hermanos en custom/ (no son módulos: harness, oba-wiki, oba-specs,
-    # ingadhoc-skills, ingadhoc-adhoc-brand-kit, etc.). Se listan dinámicos
-    # en AGENTS.md para que la lista refleje qué clonó cada dev.
-    declare -A custom_siblings
+    # Repos en custom/ fuera de repositories/ y src/ (clonados directo:
+    # harness, oba-wiki, oba-specs, ingadhoc-skills, etc., y también
+    # overrides de baked como odoo/ o enterprise/ si el dev los clona).
+    # Se listan dinámicos en AGENTS.md para reflejar qué clonó cada dev.
+    declare -A custom_others
     for d in "$CUSTOM"/*/; do
         [[ -d "$d" ]] || continue
         name=$(basename "$d")
-        [[ $name == .* || $name == repositories || $name == src || $name == adhoc ]] && continue
-        custom_siblings[$name]=1
+        [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
+        custom_others[$name]=1
     done
 
     # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/
@@ -90,20 +91,18 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 
 ## Estructura
 
-- **`repositories/`:** repos del dev (editables, branch activa).
+- **`repositories/`:** repos del dev con módulos Odoo (editables, branch activa).
+- **Otros repos clonados directo en `custom/`:** repos del ecosistema (`harness`, `oba-wiki`, `oba-specs`, `ingadhoc-skills`, etc.) y/o overrides de baked (`odoo`, `enterprise`). Listado efectivo abajo.
 - **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
   - `src/repositories/`: repos baked no en `repositories/`.
-  - Repos como `harness` u `oba-wiki` aparecen acá si no los tenés en `custom/` directamente.
 
-## Repos hermanos en custom/
-
-Repos del ecosistema (no módulos, no van en `repositories/`). Lista efectiva:
+## Repos en custom/ (fuera de repositories/ y src/)
 
 HEADER
-        if [[ ${#custom_siblings[@]} -eq 0 ]]; then
-            echo "_Ningún repo hermano clonado todavía._"
+        if [[ ${#custom_others[@]} -eq 0 ]]; then
+            echo "_Ninguno todavía._"
         else
-            for name in $(echo "${!custom_siblings[@]}" | tr ' ' '\n' | sort); do
+            for name in $(echo "${!custom_others[@]}" | tr ' ' '\n' | sort); do
                 echo "- \`$name\`"
             done
         fi
