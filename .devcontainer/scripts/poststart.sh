@@ -44,6 +44,17 @@ build_workspace() {
         in_custom[$name]=1
     done
 
+    # Repos hermanos en custom/ (no son módulos: harness, oba-wiki, oba-specs,
+    # ingadhoc-skills, ingadhoc-adhoc-brand-kit, etc.). Se listan dinámicos
+    # en AGENTS.md para que la lista refleje qué clonó cada dev.
+    declare -A custom_siblings
+    for d in "$CUSTOM"/*/; do
+        [[ -d "$d" ]] || continue
+        name=$(basename "$d")
+        [[ $name == .* || $name == repositories || $name == src || $name == adhoc ]] && continue
+        custom_siblings[$name]=1
+    done
+
     # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/
     local src_count=0
     for item in "$SRC"/*/; do
@@ -84,12 +95,30 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
   - `src/repositories/`: repos baked no en `repositories/`.
   - Repos como `harness` u `oba-wiki` aparecen acá si no los tenés en `custom/` directamente.
 
-## Repos del dev en repositories/
+## Repos hermanos en custom/
+
+Repos del ecosistema (no módulos, no van en `repositories/`). Lista efectiva:
 
 HEADER
-        for name in $(echo "${!in_custom[@]}" | tr ' ' '\n' | sort); do
-            echo "- \`$name\`"
-        done
+        if [[ ${#custom_siblings[@]} -eq 0 ]]; then
+            echo "_Ningún repo hermano clonado todavía._"
+        else
+            for name in $(echo "${!custom_siblings[@]}" | tr ' ' '\n' | sort); do
+                echo "- \`$name\`"
+            done
+        fi
+        cat <<'MIDDLE'
+
+## Repos del dev en repositories/
+
+MIDDLE
+        if [[ ${#in_custom[@]} -eq 0 ]]; then
+            echo "_Ningún repo de módulos clonado todavía._"
+        else
+            for name in $(echo "${!in_custom[@]}" | tr ' ' '\n' | sort); do
+                echo "- \`$name\`"
+            done
+        fi
         cat <<'FOOTER'
 
 ## Cómo navegar
@@ -372,25 +401,38 @@ else
     rm "$LOG_FILE" || true
 fi
 
-# Capa Workspace — convenciones Adhoc adentro del container.
+# Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
 # Requiere harness clonado en data/custom/harness (visible vía bind mount existente).
-# Escribe /home/odoo/.adhoc/ y bloque managed en .claude/CLAUDE.md, .codex/AGENTS.md, .gemini/GEMINI.md.
+# - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
+#   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
+# - Capa Workspace (--target $HOME/custom --workspace-block-only): bloque
+#   managed con reglas operativas (uso de tuqui, skills, path /home/odoo/shared)
+#   inyectado al final del AGENTS.md que generó build_workspace. NO toca
+#   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
+#   Spec 0012 Eje 3.
 HARNESS_INSTALL="$HOME/custom/harness/scripts/harness-install-user.sh"
 if [ -x "$HARNESS_INSTALL" ]; then
-    echo "Instalando capa Workspace desde $HARNESS_INSTALL"
-    "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Workspace OK."
+    echo "Instalando capa Usuario desde $HARNESS_INSTALL (target=\$HOME)"
+    "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
 
-    # Wrapper refresh-workspace para re-aplicar sin rebuild
+    echo "Aplicando bloque de capa Workspace en custom/AGENTS.md"
+    "$HARNESS_INSTALL" --target "$HOME/custom" --workspace-block-only \
+        && echo "Capa Workspace OK." \
+        || echo "AVISO: capa Workspace falló (script viejo? requiere flag --workspace-block-only)."
+
+    # Wrapper refresh-workspace para re-aplicar ambas capas sin rebuild
     REFRESH_BIN="$HOME/.local/bin/refresh-workspace"
     cat > "$REFRESH_BIN" <<EOF
 #!/bin/bash
-exec "$HARNESS_INSTALL" --target "$HOME" "\$@"
+set -e
+"$HARNESS_INSTALL" --target "\$HOME" "\$@"
+"$HARNESS_INSTALL" --target "\$HOME/custom" --workspace-block-only "\$@"
 EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: harness no disponible en custom/harness/ — capa Workspace no instalada."
-    echo "  Para activarla: clonar git@github.com:ingadhoc/harness en data/custom/harness."
+    echo "AVISO: harness no disponible en custom/harness/ — capa Usuario/Workspace no instaladas."
+    echo "  Para activarlas: clonar git@github.com:ingadhoc/harness en data/custom/harness."
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
