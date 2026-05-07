@@ -312,6 +312,23 @@ else
     LOG_FILE="$PWD/install_skill.log"
     install_failed=0
 
+    # Validación pre-install: confirmar que cada skill de INGADHOC_SKILLS exista
+    # en el catálogo vivo. Cuando se modifica el catálogo (rename, move) y este
+    # array no se sincroniza, npx skills add falla silencioso. El script
+    # validate-skill-list.sh del propio catálogo detecta el drift loud.
+    # Origen: harness spec 0014 (política-skills-y-flujo-contributor), Eje 2.
+    VALIDATE_DIR=$(mktemp -d)
+    if git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$VALIDATE_DIR" 2>/dev/null; then
+        if ! bash "$VALIDATE_DIR/scripts/validate-skill-list.sh" "${INGADHOC_SKILLS[@]}"; then
+            echo "FALLO: validación de INGADHOC_SKILLS contra catálogo. Revisá nombres en este script." >&2
+            install_failed=1
+        fi
+        rm -rf "$VALIDATE_DIR"
+    else
+        echo "WARN: no pude clonar ingadhoc/skills para validar la lista — sigo sin validación."
+        rm -rf "$VALIDATE_DIR"
+    fi
+
     # ingadhoc/skills — instalar para todos los agentes (paridad)
     SKILL_ARGS=()
     for skill in "${INGADHOC_SKILLS[@]}"; do
