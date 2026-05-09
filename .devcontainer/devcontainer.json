@@ -94,7 +94,9 @@
         // "python.linting.pylintArgs":[],
         "python.analysis.exclude": [
           // "**"
-          "/home/odoo/custom/src/**",
+          // custom/src/** ya NO se excluye: build_workspace symlinkea repos baked
+          // (no módulos individuales) ahí, son ~30 repos manejables. Indexarlos
+          // permite control-click resolver entre módulos OCA y odoo core.
           "/home/odoo/custom/adhoc/**"
         ],
         "python.analysis.autoSearchPaths": true,
