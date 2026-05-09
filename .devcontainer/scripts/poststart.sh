@@ -204,6 +204,20 @@ echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
 # Usa ~/.local para evitar permisos de root en /usr/local/lib/node_modules.
 # Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev, sacar este bloque.
 export npm_config_prefix="$HOME/.local"
+
+# Node 20+ — requerido por OpenCode v1.14+, Gemini CLI y claude-code v2.
+# User-local (N_PREFIX) para no requerir sudo, consistente con el patrón del bloque.
+# Transitorio pre-bake OCI: cuando la imagen dev traiga Node 20, sacar este bloque.
+export N_PREFIX="$HOME/.local"
+if ! command -v n &>/dev/null; then
+    echo "Instalando n (manager de Node)..."
+    npm install -g n --quiet && echo "n instalado." || echo "FALLO: no se pudo instalar n"
+fi
+if command -v n &>/dev/null; then
+    n 20 >/dev/null && echo "Node $(node -v) activo." || echo "FALLO: no se pudo activar Node 20"
+    hash -r
+fi
+
 install_cli_if_missing() {
     local cmd="$1" pkg="$2"
     if ! command -v "$cmd" &>/dev/null; then
@@ -216,6 +230,9 @@ install_cli_if_missing() {
 install_cli_if_missing claude @anthropic-ai/claude-code
 install_cli_if_missing codex @openai/codex
 install_cli_if_missing gemini @google/gemini-cli
+# OpenCode — agent runtime para spike Fase 0 Tuquichat (ingadhoc/adhoc-way#47, ADR 0019).
+# Transitorio pre-bake OCI: cuando se baje al bake, sacar de acá.
+install_cli_if_missing opencode opencode-ai
 
 # gh CLI — binario directo (no está en npm). Transitorio pre-bake.
 if ! command -v gh &>/dev/null; then
