@@ -90,7 +90,7 @@ fi
 
 # Auth de CLIs de agentes — crear dirs host-side antes de levantar el container.
 # Docker crearía los dirs como root si no existen; esto los crea como el user actual.
-# Ver spec 0006 (eje 2) en harness.
+# Ver spec 0006 (eje 2) en adhoc-way.
 mkdir -p \
     "$HOME/.adhoc-devcontainer-auth/shared/.claude" \
     "$HOME/.adhoc-devcontainer-auth/shared/.codex" \

@@ -45,7 +45,7 @@ build_workspace() {
     done
 
     # Repos en custom/ fuera de repositories/ y src/ (clonados directo:
-    # harness, oba-wiki, oba-specs, ingadhoc-skills, etc., y también
+    # adhoc-way, oba-wiki, oba-specs, ingadhoc-skills, etc., y también
     # overrides de baked como odoo/ o enterprise/ si el dev los clona).
     # Se listan dinámicos en AGENTS.md para reflejar qué clonó cada dev.
     declare -A custom_others
@@ -81,7 +81,7 @@ build_workspace() {
         done
     fi
 
-    # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar harness)
+    # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar adhoc-way)
     {
         cat <<'HEADER'
 # Workspace OBA
@@ -92,7 +92,7 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 ## Estructura
 
 - **`repositories/`:** repos del dev con módulos Odoo (editables, branch activa).
-- **Otros repos clonados directo en `custom/`:** repos del ecosistema (`harness`, `oba-wiki`, `oba-specs`, `ingadhoc-skills`, etc.) y/o overrides de baked (`odoo`, `enterprise`). Listado efectivo abajo.
+- **Otros repos clonados directo en `custom/`:** repos del ecosistema (`adhoc-way`, `oba-wiki`, `oba-specs`, `ingadhoc-skills`, etc.) y/o overrides de baked (`odoo`, `enterprise`). Listado efectivo abajo.
 - **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
   - `src/repositories/`: repos baked no en `repositories/`.
 
@@ -230,8 +230,9 @@ install_cli_if_missing() {
 install_cli_if_missing claude @anthropic-ai/claude-code
 install_cli_if_missing codex @openai/codex
 install_cli_if_missing gemini @google/gemini-cli
-# OpenCode — agent runtime para spike Fase 0 Tuquichat (ingadhoc/adhoc-way#47, ADR 0019).
-# Transitorio pre-bake OCI: cuando se baje al bake, sacar de acá.
+# OpenCode (sst/opencode) — runtime CLI alternativo a Claude Code y Codex.
+# Se mantiene en el devcontainer para que el dev pueda elegir agente.
+# Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
 
 # gh CLI — binario directo (no está en npm). Transitorio pre-bake.
@@ -248,6 +249,24 @@ if ! command -v gh &>/dev/null; then
     fi
 else
     echo "gh ya presente ($(command -v gh))."
+fi
+
+# Extras CLI (jq, ripgrep, bat) — calidad de vida para workflow con agentes.
+# Solo en imagen dev. Transitorio pre-bake OCI: cuando dev.packages los traiga,
+# sacar este bloque.
+CLI_EXTRAS=(jq ripgrep bat)
+extras_missing=()
+for pkg in "${CLI_EXTRAS[@]}"; do
+    dpkg -s "$pkg" &>/dev/null || extras_missing+=("$pkg")
+done
+if [ "${#extras_missing[@]}" -gt 0 ]; then
+    echo "Instalando extras CLI: ${extras_missing[*]}"
+    sudo apt-get -qq update \
+        && sudo apt-get -qq install -y --no-install-recommends "${extras_missing[@]}" \
+        && echo "Extras CLI instalados." \
+        || echo "FALLO: no se pudieron instalar ${extras_missing[*]}"
+else
+    echo "Extras CLI ya presentes (${CLI_EXTRAS[*]})."
 fi
 
 # Fix addons paths (symlinks)
@@ -337,7 +356,7 @@ INGADHOC_SKILLS=(
     # SDD / specs
     "product-sdd"
     # Universales del ecosistema
-    "harness-bootstrap"         # bootstrap de repo nuevo con patrón harness
+    "adhoc-way-bootstrap"       # bootstrap de repo nuevo con patrón adhoc-way
     "adhoc-pr-flow"             # detecta caso PR (4 casos post-ADR 0014) y ejecuta
 )
 
@@ -361,7 +380,7 @@ else
     # en el catálogo vivo. Cuando se modifica el catálogo (rename, move) y este
     # array no se sincroniza, npx skills add falla silencioso. El script
     # validate-skill-list.sh del propio catálogo detecta el drift loud.
-    # Origen: harness spec 0014 (política-skills-y-flujo-contributor), Eje 2.
+    # Origen: adhoc-way spec 0014 (política-skills-y-flujo-contributor), Eje 2.
     VALIDATE_DIR=$(mktemp -d)
     if git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$VALIDATE_DIR" 2>/dev/null; then
         if ! bash "$VALIDATE_DIR/scripts/validate-skill-list.sh" "${INGADHOC_SKILLS[@]}"; then
@@ -418,7 +437,7 @@ else
 fi
 
 # Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
-# Requiere harness clonado en data/custom/ingadhoc-harness/ (convención de
+# Requiere adhoc-way clonado en data/custom/ingadhoc-adhoc-way/ (convención de
 # prefijo ingadhoc- para repos de la org).
 # - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
 #   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
@@ -427,13 +446,13 @@ fi
 #   inyectado al final del AGENTS.md que generó build_workspace. NO toca
 #   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
 #   Spec 0012 Eje 3.
-HARNESS_INSTALL="$HOME/custom/ingadhoc-harness/scripts/harness-install-user.sh"
-if [ -x "$HARNESS_INSTALL" ]; then
-    echo "Instalando capa Usuario desde $HARNESS_INSTALL (target=\$HOME)"
-    "$HARNESS_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
+ADHOC_WAY_INSTALL="$HOME/custom/ingadhoc-adhoc-way/scripts/adhoc-way-install-user.sh"
+if [ -x "$ADHOC_WAY_INSTALL" ]; then
+    echo "Instalando capa Usuario desde $ADHOC_WAY_INSTALL (target=\$HOME)"
+    "$ADHOC_WAY_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
 
     echo "Aplicando bloque de capa Workspace en custom/AGENTS.md"
-    "$HARNESS_INSTALL" --target "$HOME/custom" --workspace-block-only \
+    "$ADHOC_WAY_INSTALL" --target "$HOME/custom" --workspace-block-only \
         && echo "Capa Workspace OK." \
         || echo "AVISO: capa Workspace falló (script viejo? requiere flag --workspace-block-only)."
 
@@ -442,20 +461,20 @@ if [ -x "$HARNESS_INSTALL" ]; then
     cat > "$REFRESH_BIN" <<EOF
 #!/bin/bash
 set -e
-"$HARNESS_INSTALL" --target "\$HOME" "\$@"
-"$HARNESS_INSTALL" --target "\$HOME/custom" --workspace-block-only "\$@"
+"$ADHOC_WAY_INSTALL" --target "\$HOME" "\$@"
+"$ADHOC_WAY_INSTALL" --target "\$HOME/custom" --workspace-block-only "\$@"
 EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: harness no disponible en custom/ingadhoc-harness/ — capa Usuario/Workspace no instaladas."
-    echo "  Para activarlas: clonar git@github.com:ingadhoc/harness en data/custom/ingadhoc-harness."
+    echo "AVISO: adhoc-way no disponible en custom/ingadhoc-adhoc-way/ — capa Usuario/Workspace no instaladas."
+    echo "  Para activarlas: clonar git@github.com:ingadhoc/adhoc-way en data/custom/ingadhoc-adhoc-way."
 fi
 
 # Allow-list base de Claude Code (operaciones read-only) — reduce prompts
 # durante demos / análisis. Idempotente: solo escribe si no existe el archivo.
 # Si el dev tiene un settings.json propio, lo respeta.
-# A futuro esto se promueve al template managed del harness (item ROADMAP).
+# A futuro esto se promueve al template managed de adhoc-way (item ROADMAP).
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 if [ ! -f "$CLAUDE_SETTINGS" ]; then
     mkdir -p "$(dirname "$CLAUDE_SETTINGS")"
