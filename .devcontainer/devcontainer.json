@@ -44,16 +44,18 @@
           "*.json": "jsonc"
         },
         "files.exclude": {
+            // Criterio: ocultar solo metadata que el dev edita raramente
+            // (managed por scripts, o config one-shot). `.vscode/` NO entra
+            // acá: devs de Odoo editan launch.json/settings.json a diario
+            // para tunear env vars, args y parámetros de debug.
             ".devcontainer": true,
-            //".vscode": true,
             ".github": true,
             "*.Dockerfile.dockerignore": true,
             ".agents": true,
             ".claude": true,
             ".codex": true,
             ".gemini": true,
-            ".adhoc": true,
-            ".vscode": true
+            ".adhoc": true
         },
         "search.exclude": {
           ".devcontainer": true,
