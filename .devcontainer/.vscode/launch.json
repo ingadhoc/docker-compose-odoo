@@ -26,12 +26,17 @@
             },
             "pathMappings": [
                 {
+                    // Overlay de symlinks: custom/src/<repo>/ apunta a
                     "localRoot": "${workspaceFolder}/src",
                     "remoteRoot": "/home/odoo/src"
                 },
                 {
+                    // Identity mapping del workspace completo. Necesario:
+                    // cuando hay pathMappings declarados, debugpy SOLO
+                    // bindea breakpoints en paths cubiertos por algún
+                    // mapping.
                     "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "/home/odoo/custom/repositories"
+                    "remoteRoot": "/home/odoo/custom"
                 }
             ]
         }
