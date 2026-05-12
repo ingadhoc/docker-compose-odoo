@@ -19,6 +19,11 @@ services:
       - ${HOME}/.adhoc-devcontainer-auth/shared/gh:/home/odoo/.config/gh
       # Path canónico host↔container para sharing de archivos (spec 0012 eje 2)
       - ${HOME}/odoo-shared:/home/odoo/shared
+      # Capa Usuario adhoc-way — user.md + teams + conventions.md compartidos
+      # host↔container. Permite que adhoc-way-install-user.sh y poststart.sh
+      # lean/escriban la misma identidad sin sincronización manual.
+      # Ver spec devops-workspace-context (devops-specs) Eje 1.
+      - ${HOME}/.adhoc:/home/odoo/.adhoc
     labels:
       - traefik.enable=true
       - traefik.docker.network=adhoc

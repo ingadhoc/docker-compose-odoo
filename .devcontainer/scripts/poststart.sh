@@ -471,6 +471,144 @@ else
     echo "  Para activarlas: clonar git@github.com:ingadhoc/adhoc-way en data/custom/ingadhoc-adhoc-way."
 fi
 
+# DevOps workspace context — Eje 2 + Eje 3 de devops-workspace-context spec
+# (ingadhoc/devops-specs, ver custom/devops-ctx/devops-specs/specs/10_draft/
+# devops-workspace-context.md una vez baked).
+#
+# Activa el módulo cuando el user pertenece al team "devops" (línea en
+# ~/.adhoc/teams, generado por adhoc-way-install-user.sh a partir de user.md).
+# Idempotente: clones nuevos al primer rebuild; fetch a los existentes después.
+init_devops_ctx() {
+    local teams_file="$HOME/.adhoc/teams"
+    if [ ! -f "$teams_file" ] || ! grep -q "^devops$" "$teams_file"; then
+        return 0
+    fi
+    echo "Team DevOps detectado en $teams_file — inicializando custom/devops-ctx/"
+
+    local devops_ctx="$HOME/custom/devops-ctx"
+    mkdir -p "$devops_ctx"
+
+    # Repos default (6) — ver spec devops-workspace-context Eje 2.
+    # 5 infra core + devops-specs (la categoría "Specs del team").
+    local -a default_repos=(
+        "oci-odoo-by-adhoc|git@github.com:adhoc-cicd/oci-odoo-by-adhoc.git"
+        "helm-charts|git@github.com:adhoc-dev/helm-charts.git"
+        "devops-cloud-infra|git@github.com:ingadhoc/devops-cloud-infra.git"
+        "devops-ops-tools|git@github.com:ingadhoc/devops-ops-tools.git"
+        "pylib_odoo_saas|git@github.com:ingadhoc/pylib_odoo_saas.git"
+        "devops-specs|git@github.com:ingadhoc/devops-specs.git"
+    )
+
+    for entry in "${default_repos[@]}"; do
+        local repo_name="${entry%%|*}"
+        local repo_url="${entry##*|}"
+        local dest="$devops_ctx/$repo_name"
+        if [ ! -d "$dest/.git" ]; then
+            echo "  Clonando $repo_name..."
+            git clone --depth=20 "$repo_url" "$dest" 2>&1 | tail -1 || \
+                echo "  AVISO: clone $repo_name falló (sin auth GitHub? skipping)"
+        else
+            (cd "$dest" && git fetch --quiet origin 2>/dev/null) || \
+                echo "  AVISO: fetch $repo_name falló (skipping)"
+        fi
+    done
+
+    # Mini-wiki (Eje 3) — bloque managed, regenerado en cada poststart.
+    cat > "$devops_ctx/AGENTS.md" <<'AGENTS_MD'
+# DevOps context — stack Adhoc
+
+Activado automáticamente por `poststart.sh` cuando `~/.adhoc/teams`
+contiene `devops`. Spec madre:
+`devops-specs/specs/10_draft/devops-workspace-context.md`.
+
+## Repos en este folder
+
+- `oci-odoo-by-adhoc` (`adhoc-cicd/`) — bake de la imagen Odoo by Adhoc.
+  Stages `os-base` → `prod` → `dev`. PR workflow: `branch + PR same-repo`
+  en `adhoc-cicd/`. Tags `.next` para builds de prueba.
+- `helm-charts` (`adhoc-dev/`) — charts Helm del stack: DB (CNPG), Odoo,
+  jobs de instalación / mantenimiento, certs SSL, ingress.
+- `devops-cloud-infra` (`ingadhoc/`) — IaC en Pulumi del cluster k8s
+  **nuevo** (en migración). Convive con el cluster legacy `adhocprod`.
+- `devops-ops-tools` (`ingadhoc/`) — otras imágenes que mantenemos
+  (no-Odoo).
+- `pylib_odoo_saas` (`ingadhoc/`) — librería Python con helpers que el
+  módulo Odoo `saas_k8s` consume para hacer ABM en los clusters.
+- `devops-specs` (`ingadhoc/`) — specs y ADRs del equipo DevOps.
+
+## Stack en una pantalla
+
+- **Compute:** Kubernetes. **Cluster nuevo:** definido en
+  `devops-cloud-infra` (Pulumi). **Cluster legacy:** `adhocprod` (en
+  migración).
+- **Database:** Postgres vía CNPG (operator de CloudNativePG).
+- **Bake de imágenes:** `oci-odoo-by-adhoc` para Odoo (CI con
+  `odoo_target=<version>`; tags `.next` para test); `devops-ops-tools`
+  para el resto.
+- **Deploys:** Helm charts (`helm-charts`) — la fuente única para la
+  topología del stack desplegado (DB, Odoo, jobs, certs SSL).
+- **SaaS provisioning (cruza con Odoo):** el módulo Odoo `saas_k8s`
+  extiende `saas_provider` + `saas_database` para ABM de apps Odoo en
+  los clusters. Se apoya en `pylib_odoo_saas`. El módulo vive en
+  `custom/repositories/` (lado Odoo), no acá.
+
+## Convenciones DevOps
+
+- **Kubeconfigs** viven en `~/.kube/config` (no en este folder, no se
+  commitea a ningún repo).
+- **Secrets** no entran a este folder; se gestionan vía vault externo /
+  sealed-secrets / similar.
+- **PR workflow** por repo: `adhoc-cicd/*` opera `branch + PR same-repo`;
+  `ingadhoc/*` y `adhoc-dev/*` siguen los 4 casos del adhoc-way (ver
+  `~/.adhoc/conventions.md`).
+- **Cluster legacy `adhocprod`:** cualquier cambio destructivo va por la
+  guild DevOps recurrente (jueves 10am, T-67562).
+
+## Otros contextos relacionados (no acá)
+
+- `custom/it-ctx/` — herramientas del equipo de sistemas del cliente
+  interno (`devops-apt-repository`, `adhocCli`/`r2`, `ansible_notebooks`).
+  Spec: `devops-specs/specs/10_draft/internal-team-context.md`.
+- `custom/repositories/` — addons Odoo del workspace OBA (incluye
+  `saas_k8s`, consumidor del stack DevOps).
+
+---
+
+_Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh` o (mejor) promoverlo a un template versionado en
+`devops-specs`._
+AGENTS_MD
+
+    # README del folder con instrucciones de regen / opt-out.
+    cat > "$devops_ctx/README.md" <<'README_MD'
+# devops-ctx
+
+Folder de contexto del team DevOps en el devcontainer OBA. Generado
+automáticamente por `.devcontainer/scripts/poststart.sh` cuando
+`~/.adhoc/teams` contiene `devops`.
+
+## Cómo regenerar
+
+```bash
+refresh-workspace      # re-aplica capa Usuario/Workspace adhoc-way
+# o
+git fetch              # en cada subrepo individualmente
+```
+
+Para regenerar los clones (fresh): `rm -rf custom/devops-ctx/<repo>` y
+rebuild.
+
+## Cómo desactivar
+
+Sacar la línea `devops` de `~/.adhoc/teams` (host). En la próxima
+rebuild, el folder queda intacto pero no se actualizan los clones.
+README_MD
+
+    echo "  custom/devops-ctx/ OK (6 repos default + AGENTS.md + README.md)."
+}
+init_devops_ctx
+
 # Allow-list base de Claude Code (operaciones read-only) — reduce prompts
 # durante demos / análisis. Idempotente: solo escribe si no existe el archivo.
 # Si el dev tiene un settings.json propio, lo respeta.
