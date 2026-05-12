@@ -62,7 +62,7 @@
           "dockerfiles": true,
           // ".vscode": true,
           ".github": true,
-          "src": true,
+          "src": false, // Queremos search dentro de src, aunque esté fuera del workspace
           "adhoc": true
         },
         // Python Defaults
@@ -81,8 +81,21 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // PyLance
-        "python.languageServer": "Pylance",
+        // Pylance — calibrar diagnostics para la realidad de Odoo (ORM
+        // dinámico genera muchos falsos positivos de "attribute access").
+        // El languageServer es el default del ms-python.python actual; no
+        // hace falta declararlo explícito.
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.useLibraryCodeForTypes": false,
+        "python.analysis.diagnosticSeverityOverrides": {
+          "reportAttributeAccessIssue": "none",
+          "reportCallIssue": "warning",
+          "reportGeneralTypeIssues": "warning",
+          "reportArgumentType": "warning"
+        },
+        "editor.quickSuggestions": {
+            "strings": true
+        },
         "python.analysis.languageServerMode": "light",
         "python.analysis.extraPaths": [
             "/home/odoo/src/odoo",
@@ -140,7 +153,8 @@
         "streetsidesoftware.code-spell-checker",
         "njpwerner.autodocstring",
         "Odoo.odoo",
-        "zaaack.markdown-editor"
+        "zaaack.markdown-editor",
+        "anthropic.claude-code"
       ],
       "remote.defaultExtensionsIfInstalledLocally": [
         "GitHub.copilot",
