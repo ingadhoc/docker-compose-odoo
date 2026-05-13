@@ -83,8 +83,7 @@
         },
         // Pylance — calibrar diagnostics para la realidad de Odoo (ORM
         // dinámico genera muchos falsos positivos de "attribute access").
-        // El languageServer es el default del ms-python.python actual; no
-        // hace falta declararlo explícito.
+        "python.languageServer": "Pylance",
         "python.analysis.typeCheckingMode": "basic",
         "python.analysis.useLibraryCodeForTypes": false,
         "python.analysis.diagnosticSeverityOverrides": {
