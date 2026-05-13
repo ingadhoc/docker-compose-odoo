@@ -55,14 +55,12 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         echo "Fixing env vars"
         sed_inplace "s/^DOMAIN=.*/DOMAIN=$ODOO_V.odoo.localhost/" "$SCRIPT_DIR/.env"
         sed_inplace "s/^ODOO_VERSION=.*/ODOO_VERSION=$ODOO_V/" "$SCRIPT_DIR/.env"
-    fi
-
-    if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]]; then
-        sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
+        if ! grep -qE "^ODOO_MINOR=${ODOO_V}\." "$SCRIPT_DIR/.env"; then
+            sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
+        fi
     fi
 
     if [[ "$ODOO_V" == "master" ]]; then
-        sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.dev/" "$SCRIPT_DIR/.env"
         sed_inplace "s/^SERVER_WIDE_MODULES=/# SERVER_WIDE_MODULES=/" "$SCRIPT_DIR/.env"
         # sed_inplace "s/^IGNORE_SRC_REPOSITORIES=.*$/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
         sed_inplace "s|/home/odoo/custom/repositories|/home/odoo/custom|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
