@@ -7,16 +7,30 @@ services:
       - ./data/custom:/home/odoo/custom
       # - default:/home/odoo/src
       - odoo_data:/home/odoo/data
-      # Auth de CLIs de agentes — persiste entre rebuilds del devcontainer.
-      # El dir se crea con mkdir -p en init.sh. Ver spec 0006 (eje 2).
-      - ${HOME}/.adhoc-devcontainer-auth/shared/.claude:/home/odoo/.claude
-      - ${HOME}/.adhoc-devcontainer-auth/shared/.codex:/home/odoo/.codex
-      - ${HOME}/.adhoc-devcontainer-auth/shared/.gemini:/home/odoo/.gemini
-      - ${HOME}/.adhoc-devcontainer-auth/shared/claude.json:/home/odoo/.claude.json
-      # Skills github-copilot y agents genéricos — persiste entre rebuilds.
-      - ${HOME}/.adhoc-devcontainer-auth/shared/.agents:/home/odoo/.agents
-      # gh CLI — persiste auth entre rebuilds (spec 0012 eje 1)
-      - ${HOME}/.adhoc-devcontainer-auth/shared/gh:/home/odoo/.config/gh
+      # Auth + estado de CLIs de agentes — bind mount via "hop" dir local
+      # al repo (`.devcontainer/auth/`). Cada entry es un symlink (default,
+      # creado por init.sh apuntando al $HOME del dev) o un dir real
+      # (opt-out a aislamiento, dev lo decide).
+      #
+      # - Default: symlinks → estado COMPARTIDO host↔container (sessions,
+      #   MCPs, tokens transparentes; cero re-login post-rebuild).
+      # - Opt-out: reemplazar symlink por dir real → estado AISLADO en repo
+      #   (similar al modelo dir-separado de spec 0012, pero bajo el control
+      #   del dev). Útil para contractors / threat-model estricto.
+      #
+      # Docker bind-mountea el target del symlink (no el symlink), así que
+      # el efecto es idéntico a mount directo al host. docker-compose.yml
+      # queda agnóstico — la decisión "compartido vs aislado" no requiere
+      # tocar este archivo.
+      #
+      # Supersede el modelo de dir separado (~/.adhoc-devcontainer-auth/
+      # shared/) que estableció spec 0012. Ver ADR 0023 en adhoc-way.
+      - ./.devcontainer/auth/.claude:/home/odoo/.claude
+      - ./.devcontainer/auth/.codex:/home/odoo/.codex
+      - ./.devcontainer/auth/.gemini:/home/odoo/.gemini
+      - ./.devcontainer/auth/.claude.json:/home/odoo/.claude.json
+      - ./.devcontainer/auth/.agents:/home/odoo/.agents
+      - ./.devcontainer/auth/.config/gh:/home/odoo/.config/gh
       # Path canónico host↔container para sharing de archivos (spec 0012 eje 2)
       - ${HOME}/odoo-shared:/home/odoo/shared
       # Capa Usuario adhoc-way — user.md + teams + conventions.md compartidos

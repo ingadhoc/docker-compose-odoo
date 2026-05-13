@@ -86,23 +86,47 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
 
 fi
 
-# Auth de CLIs de agentes — crear dirs host-side antes de levantar el container.
-# Docker crearía los dirs como root si no existen; esto los crea como el user actual.
-# Ver spec 0006 (eje 2) en adhoc-way.
+# Auth + estado de CLIs de agentes — setup del "hop" dir local al repo
+# (`.devcontainer/auth/`). docker-compose.yml mountea este dir al container;
+# cada entry es un symlink (default → $HOME del dev = estado COMPARTIDO)
+# o un dir real (opt-out → estado AISLADO en repo, controlado por el dev).
+#
+# Docker bind-mountea el target del symlink, así que efecto es idéntico a
+# mount directo al host cuando default. docker-compose.yml queda agnóstico.
+#
+# Decisión: ADR 0023 en adhoc-way (mayo 2026) — supersede el dir separado
+# `~/.adhoc-devcontainer-auth/shared/` que estableció spec 0012.
+
+# 1. Ensure host paths exist (Docker los crearía como root si faltan).
+#    Si el dev ya usó claude/codex/gh en el host, no toca.
 mkdir -p \
-    "$HOME/.adhoc-devcontainer-auth/shared/.claude" \
-    "$HOME/.adhoc-devcontainer-auth/shared/.codex" \
-    "$HOME/.adhoc-devcontainer-auth/shared/.gemini" \
-    "$HOME/.adhoc-devcontainer-auth/shared/.agents" \
-    "$HOME/.adhoc-devcontainer-auth/shared/gh" \
+    "$HOME/.claude" \
+    "$HOME/.codex" \
+    "$HOME/.gemini" \
+    "$HOME/.agents" \
+    "$HOME/.config/gh" \
     "$HOME/odoo-shared" \
     "$HOME/.adhoc"
-# claude.json necesita existir como FILE antes del mount (Docker crearía un dir si no existe)
-if [ ! -f "$HOME/.adhoc-devcontainer-auth/shared/claude.json" ]; then
+if [ ! -f "$HOME/.claude.json" ]; then
     echo '{"hasCompletedOnboarding":true,"numStartups":5,"installMethod":"npm","autoUpdates":true}' \
-        > "$HOME/.adhoc-devcontainer-auth/shared/claude.json"
+        > "$HOME/.claude.json"
 fi
-echo "Auth dirs listos: $HOME/.adhoc-devcontainer-auth/shared/"
+
+# 2. Hop dir local al repo + symlinks default (compartido con host).
+#    Si el dev quiere aislar un entry: borrar el symlink y crear dir/file
+#    real en su lugar (`rm auth/.claude && mkdir auth/.claude`). Persiste
+#    per-machine, no committable (gitignoreado).
+HOP_DIR="$SCRIPT_DIR/.devcontainer/auth"
+mkdir -p "$HOP_DIR/.config"
+for item in .claude .codex .gemini .agents .claude.json; do
+    if [ ! -e "$HOP_DIR/$item" ]; then
+        ln -s "$HOME/$item" "$HOP_DIR/$item"
+    fi
+done
+if [ ! -e "$HOP_DIR/.config/gh" ]; then
+    ln -s "$HOME/.config/gh" "$HOP_DIR/.config/gh"
+fi
+echo "Auth hop listo: $HOP_DIR (symlinks default → \$HOME del dev)."
 
 echo "Binding directory"
 docker rm -f odoo-${ODOO_V} 2> /dev/null
