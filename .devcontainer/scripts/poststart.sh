@@ -521,6 +521,19 @@ Activado automáticamente por `poststart.sh` cuando `~/.adhoc/teams`
 contiene `devops`. Spec madre:
 `devops-specs/specs/10_draft/devops-workspace-context.md`.
 
+## Cuándo iniciar Claude acá vs en `custom/`
+
+- **DevOps puro** (infra, seguridad, k8s, Pulumi, Helm, OCI bake, IaC):
+  iniciar desde `custom/devops-ctx/`. Carga este `AGENTS.md` primero
+  → el agente arranca con contexto del stack en vez de pegárselo cada
+  vez.
+- **DevOps ↔ Odoo** (módulo `saas_k8s`, bake de versión nueva que toca
+  addons, helm chart que consume un módulo, debugging end-to-end):
+  iniciar desde `custom/`. Carga el `AGENTS.md` del workspace OBA con
+  las reglas cross-repo + lista de addons + reglas Tuqui.
+- **Editar specs / ADRs del team:** iniciar desde
+  `custom/devops-ctx/devops-specs/`.
+
 ## Repos en este folder
 
 - `oci-odoo-by-adhoc` (`adhoc-cicd/`) — bake de la imagen Odoo by Adhoc.
@@ -552,6 +565,54 @@ contiene `devops`. Spec madre:
   los clusters. Se apoya en `pylib_odoo_saas`. El módulo vive en
   `custom/repositories/` (lado Odoo), no acá.
 
+## Wiki provisoria — dónde está cada cosa
+
+No hay un `devops-wiki` dedicado (todavía). La documentación técnica
+del stack vive en el `doc/` de cada repo, con grados de detalle muy
+distintos. Mapa rápido:
+
+- **`devops-cloud-infra/doc/`** — el más rico hoy. Arquitectura
+  (`architecture.md` + `architecture-diagrams.md`), CI/CD (`cicd.md`),
+  networking (`networking-overview.md`, `networks.md`, `psc.md`),
+  identity / access (`identity-access-overview.md`, `groups.md`,
+  `connect-gateway-authz.md`, `connect-gateway.md`), ingress
+  (`ingress-overview.md`, `gateway-api.md`), bastion (`bastion.md`),
+  apps en k8s (`k8s_apps.md`), GKE (`gke-overview.md`), config
+  (`config.md`). Empezar acá para cualquier pregunta sobre el cluster
+  nuevo.
+- **`oci-odoo-by-adhoc/doc/`** — bake de imagen Odoo. `layers.md`,
+  `dependencies.md`, `others.md`, drawings excalidraw.
+- **`pylib_odoo_saas/doc/`** — placeholder mínimo; leer `src/` y
+  `test/` directo.
+- **`helm-charts/README.MD`** + `charts/<chart>/` — referencia de cada
+  chart vive en el README del chart correspondiente.
+- **`devops-ops-tools/readme.md`** + `specifications.md` — overview
+  de las imágenes no-Odoo.
+- **`devops-specs/specs/`** + `decisions/` — specs y ADRs del team.
+  `30_done/` decisiones cerradas, `10_draft/` lo que está en arranque.
+
+Cuando una pregunta no encuentre respuesta en `doc/`, leer el código
+fuente directo (Pulumi en `__main__.py` + `k8s_apps/` + `infra_cell/`
++ `infra_fleethost/`; charts en `helm-charts/charts/`; Dockerfiles en
+`oci-odoo-by-adhoc/<version>/`). **No inventar** — si no está
+documentada, decirlo.
+
+## Tuqui Adhoc — connector operativo, no source of truth técnica
+
+Análogo a la regla del workspace OBA (`custom/AGENTS.md`):
+
+- **Sí (connector):** leer tareas / tickets / chatter de DevOps,
+  registrar PRs contra una tarea, postear updates en chatter,
+  consultar `saas.pull.request` / `adhoc.module`, transcribir videos.
+- **No (source of truth técnica):** responder "cómo funciona X en el
+  stack" con `odoo_search_read`. La info **no vive en Odoo** — vive en
+  los repos clonados acá (`devops-cloud-infra/doc/`, `helm-charts/`,
+  Dockerfiles, código Pulumi). Leer ahí antes que llamar al MCP.
+
+`tuqui_context` se corre cuando hay caso explícito (tarea / ticket /
+PR), no por reflejo. Cualquier `odoo_create` / `odoo_write` /
+`message_post` / `unlink` requiere OK explícito por cada acción.
+
 ## Convenciones DevOps
 
 - **Kubeconfigs** viven en `~/.kube/config` (no en este folder, no se
@@ -580,6 +641,38 @@ poststart.sh` o (mejor) promoverlo a un template versionado en
 `devops-specs`._
 AGENTS_MD
 
+    # CLAUDE.md y GEMINI.md — punteros cortos a AGENTS.md (ADR 0001 adhoc-way).
+    cat > "$devops_ctx/CLAUDE.md" <<'CLAUDE_MD'
+# CLAUDE.md
+
+Este folder adopta **[`AGENTS.md`](./AGENTS.md)** como fuente canónica
+de instrucciones para agentes de IA (ADR 0001 adhoc-way).
+
+> Antes de responder cualquier mensaje en este folder, leé `AGENTS.md`
+> y aplicá sus instrucciones — sobre todo la sección "Cuándo iniciar
+> Claude acá vs en `custom/`" y "Tuqui Adhoc — connector operativo".
+> Esta carga manual es necesaria porque Claude Code auto-carga solo
+> `CLAUDE.md`, no `AGENTS.md`.
+
+Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh`.
+CLAUDE_MD
+
+    cat > "$devops_ctx/GEMINI.md" <<'GEMINI_MD'
+# GEMINI.md
+
+Este folder adopta **[`AGENTS.md`](./AGENTS.md)** como fuente canónica
+de instrucciones para agentes de IA (ADR 0001 adhoc-way).
+
+Antes de responder, leé `AGENTS.md` — sobre todo "Cuándo iniciar
+Claude acá vs en `custom/`" y "Tuqui Adhoc — connector operativo".
+
+Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh`.
+GEMINI_MD
+
     # README del folder con instrucciones de regen / opt-out.
     cat > "$devops_ctx/README.md" <<'README_MD'
 # devops-ctx
@@ -605,7 +698,7 @@ Sacar la línea `devops` de `~/.adhoc/teams` (host). En la próxima
 rebuild, el folder queda intacto pero no se actualizan los clones.
 README_MD
 
-    echo "  custom/devops-ctx/ OK (6 repos default + AGENTS.md + README.md)."
+    echo "  custom/devops-ctx/ OK (6 repos default + AGENTS.md + CLAUDE.md + GEMINI.md + README.md)."
 }
 init_devops_ctx
 
