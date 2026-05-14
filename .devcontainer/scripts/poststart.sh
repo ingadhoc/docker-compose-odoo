@@ -498,8 +498,10 @@ else
 fi
 
 # Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
-# Requiere adhoc-way clonado en data/custom/ingadhoc-adhoc-way/ (convención de
-# prefijo ingadhoc- para repos de la org).
+# Busca adhoc-way con resolución "custom gana, src fallback":
+#   1. custom/adhoc-way-ctx/adhoc-way/  ← layout actual con contextos
+#   2. custom/ingadhoc-adhoc-way/       ← layout legacy (prefijo ingadhoc-)
+#   3. src/adhoc-way-ctx/adhoc-way/     ← baked en imagen dev (default)
 # - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
 #   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
 # - Capa Workspace (--target $HOME/custom --workspace-block-only): bloque
@@ -507,8 +509,18 @@ fi
 #   inyectado al final del AGENTS.md que generó build_workspace. NO toca
 #   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
 #   Spec 0012 Eje 3.
-ADHOC_WAY_INSTALL="$HOME/custom/ingadhoc-adhoc-way/scripts/adhoc-way-install-user.sh"
-if [ -x "$ADHOC_WAY_INSTALL" ]; then
+ADHOC_WAY_INSTALL=""
+for candidate in \
+    "$HOME/custom/adhoc-way-ctx/adhoc-way/scripts/adhoc-way-install-user.sh" \
+    "$HOME/custom/ingadhoc-adhoc-way/scripts/adhoc-way-install-user.sh" \
+    "$HOME/src/adhoc-way-ctx/adhoc-way/scripts/adhoc-way-install-user.sh" ; do
+    if [ -x "$candidate" ]; then
+        ADHOC_WAY_INSTALL="$candidate"
+        break
+    fi
+done
+
+if [ -n "$ADHOC_WAY_INSTALL" ]; then
     echo "Instalando capa Usuario desde $ADHOC_WAY_INSTALL (target=\$HOME)"
     "$ADHOC_WAY_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
 
@@ -528,8 +540,8 @@ EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: adhoc-way no disponible en custom/ingadhoc-adhoc-way/ — capa Usuario/Workspace no instaladas."
-    echo "  Para activarlas: clonar git@github.com:ingadhoc/adhoc-way en data/custom/ingadhoc-adhoc-way."
+    echo "AVISO: adhoc-way no encontrado — capa Usuario/Workspace no instaladas."
+    echo "  Buscado en: custom/adhoc-way-ctx/adhoc-way/, custom/ingadhoc-adhoc-way/, src/adhoc-way-ctx/adhoc-way/."
 fi
 
 # DevOps workspace context — Eje 2 + Eje 3 de devops-workspace-context spec

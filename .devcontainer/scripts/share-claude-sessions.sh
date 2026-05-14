@@ -39,7 +39,10 @@ for host_proj in "$PROJECTS_DIR"/*; do
             rest="${host_name#*-data-custom}"
             container_name="-home-odoo-custom${rest}"
             if [ "$host_name" != "$container_name" ] && [ ! -e "$PROJECTS_DIR/$container_name" ]; then
-                ln -s "$host_name" "$PROJECTS_DIR/$container_name"
+                # `--` separa flags del target — `$host_name` empieza con `-`
+                # (es un dir encoded), si no, ln lo trata como opción y falla
+                # con `invalid option -- 'h'`.
+                ln -s -- "$host_name" "$PROJECTS_DIR/$container_name"
                 linked=$((linked + 1))
             fi
             ;;
