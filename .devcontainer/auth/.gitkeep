@@ -1,0 +1,7 @@
+# Hop dir para auth + estado de agentes (Claude, Codex, gh, etc.).
+# Contenido (symlinks default a $HOME del dev, o dirs reales si el dev
+# quiere aislar) es per-machine y no se commitea — ver .gitignore.
+# Estructura y este .gitkeep sí se commitean para que el dir exista en
+# clone fresh.
+#
+# Setup: lo hace init.sh al primer arranque. Ver ADR 0023 en adhoc-way.

@@ -5,9 +5,18 @@ data/custom/*
 !data/custom/repositories/.github/
 !data/custom/repositories/.github/agents/
 !data/custom/repositories/.github/agents/**
+# .mcp.json project-scope: bakeado en el repo para que claude code adentro
+# del devcontainer (parado en /home/odoo/custom/) detecte tuqui-adhoc sin
+# que el dev tenga que registrarlo manual. ADR mayo 2026 (bind mount directo).
+!data/custom/.mcp.json
 data/default
 tmp/*
 docker-compose.override.yml
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
 !.devcontainer/workspace/.gitkeep
+# Hop dir para auth + estado de agentes. Contenido per-machine (symlinks
+# a $HOME del dev, o dirs reales si el dev aisla). Sólo el .gitkeep se
+# commitea para que la estructura exista en clone fresh. ADR 0023.
+.devcontainer/auth/*
+!.devcontainer/auth/.gitkeep

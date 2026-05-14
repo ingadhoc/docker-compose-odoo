@@ -48,12 +48,33 @@ build_workspace() {
     # adhoc-way, oba-wiki, oba-specs, ingadhoc-skills, etc., y también
     # overrides de baked como odoo/ o enterprise/ si el dev los clona).
     # Se listan dinámicos en AGENTS.md para reflejar qué clonó cada dev.
+    # Excluye los contextos *-ctx — esos se listan en sección router aparte.
     declare -A custom_others
     for d in "$CUSTOM"/*/; do
         [[ -d "$d" ]] || continue
         name=$(basename "$d")
         [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
+        [[ $name == *-ctx ]] && continue
         custom_others[$name]=1
+    done
+
+    # Contextos (folders *-ctx) — detección "custom gana, src fallback".
+    # Pattern documentado en T-67744: el agente IA detecta qué contextos
+    # están disponibles y a qué path apuntan. El dev NO ve el contexto en
+    # su workspace (no se symlinkea al top-level) salvo que lo clone
+    # explícito en custom/. Si el contexto solo existe en src/ (baked en la
+    # imagen), el path en el router apunta directo a src/<X-ctx>/.
+    declare -A contexts
+    for item in "$CUSTOM"/*-ctx/; do
+        [[ -d "$item" ]] || continue
+        name=$(basename "$item")
+        contexts[$name]="${item%/}"
+    done
+    for item in "$SRC"/*-ctx/; do
+        [[ -d "$item" ]] || continue
+        name=$(basename "$item")
+        [[ -n "${contexts[$name]:-}" ]] && continue
+        contexts[$name]="${item%/}"
     done
 
     # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/
@@ -83,11 +104,44 @@ build_workspace() {
 
     # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar adhoc-way)
     {
-        cat <<'HEADER'
+        cat <<'INTRO'
 # Workspace OBA
 
 Iniciá `claude`, `codex` o `gemini` desde `/home/odoo/custom/` para trabajo cross-repo.
 Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
+
+## Modos de trabajo (router de contextos)
+
+Al pararte acá con un agente IA, elegí el modo según el tema. Los contextos se detectan automáticamente — `custom/<X-ctx>/` (clonado por el dev) gana sobre `/home/odoo/src/<X-ctx>/` (baked en la imagen). El dev no ve el contexto en su workspace salvo que lo clone explícito; el agente sí sabe que existe via este listado.
+
+INTRO
+        if [[ ${#contexts[@]} -eq 0 ]]; then
+            echo "_Sin contextos detectados todavía._"
+        else
+            for name in $(echo "${!contexts[@]}" | tr ' ' '\n' | sort); do
+                path="${contexts[$name]}"
+                base="${name%-ctx}"
+                case "$name" in
+                    adhoc-way-ctx)
+                        desc="onboarding al patrón adhoc-way, convenciones del ecosistema, specs, ADRs (subdirs: adhoc-way, oba-wiki)"
+                        ;;
+                    devops-ctx)
+                        desc="tareas DevOps: k8s/Pulumi, charts Helm, OCI bake, herramientas internas"
+                        ;;
+                    *)
+                        desc=""
+                        ;;
+                esac
+                if [[ -n "$desc" ]]; then
+                    echo "- **$base** ($desc): \`$path/\`"
+                else
+                    echo "- **$base**: \`$path/\`"
+                fi
+            done
+        fi
+        cat <<'STRUCT'
+
+**Default** (sin contexto explícito): módulos OBA, tareas Tuqui, debugging Odoo. Seguir lo que sigue en este AGENTS.md.
 
 ## Estructura
 
@@ -98,7 +152,7 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 
 ## Repos en custom/ (fuera de repositories/ y src/)
 
-HEADER
+STRUCT
         if [[ ${#custom_others[@]} -eq 0 ]]; then
             echo "_Ninguno todavía._"
         else
@@ -141,6 +195,13 @@ EOF
     echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
 }
 build_workspace
+
+# Compartir sesiones de Claude Code host↔container.
+# Delegado al script standalone para que postStartCommand también pueda
+# correrlo (en cada start del container, no solo en postCreate como
+# poststart.sh) y captar proyectos nuevos del host sin necesidad de
+# rebuild. Detalle de la lógica en share-claude-sessions.sh.
+/scripts/share-claude-sessions.sh || true
 
 # workspace-add / workspace-rm — comandos para traer/sacar repos de src/ bajo demanda
 WORKSPACE_ADD="$HOME/.local/bin/workspace-add"
@@ -437,8 +498,10 @@ else
 fi
 
 # Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
-# Requiere adhoc-way clonado en data/custom/ingadhoc-adhoc-way/ (convención de
-# prefijo ingadhoc- para repos de la org).
+# Busca adhoc-way con resolución "custom gana, src fallback":
+#   1. custom/adhoc-way-ctx/adhoc-way/  ← layout actual con contextos
+#   2. custom/ingadhoc-adhoc-way/       ← layout legacy (prefijo ingadhoc-)
+#   3. src/adhoc-way-ctx/adhoc-way/     ← baked en imagen dev (default)
 # - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
 #   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
 # - Capa Workspace (--target $HOME/custom --workspace-block-only): bloque
@@ -446,8 +509,18 @@ fi
 #   inyectado al final del AGENTS.md que generó build_workspace. NO toca
 #   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
 #   Spec 0012 Eje 3.
-ADHOC_WAY_INSTALL="$HOME/custom/ingadhoc-adhoc-way/scripts/adhoc-way-install-user.sh"
-if [ -x "$ADHOC_WAY_INSTALL" ]; then
+ADHOC_WAY_INSTALL=""
+for candidate in \
+    "$HOME/custom/adhoc-way-ctx/adhoc-way/scripts/adhoc-way-install-user.sh" \
+    "$HOME/custom/ingadhoc-adhoc-way/scripts/adhoc-way-install-user.sh" \
+    "$HOME/src/adhoc-way-ctx/adhoc-way/scripts/adhoc-way-install-user.sh" ; do
+    if [ -x "$candidate" ]; then
+        ADHOC_WAY_INSTALL="$candidate"
+        break
+    fi
+done
+
+if [ -n "$ADHOC_WAY_INSTALL" ]; then
     echo "Instalando capa Usuario desde $ADHOC_WAY_INSTALL (target=\$HOME)"
     "$ADHOC_WAY_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
 
@@ -467,8 +540,8 @@ EOF
     chmod +x "$REFRESH_BIN"
     echo "refresh-workspace disponible en $REFRESH_BIN"
 else
-    echo "AVISO: adhoc-way no disponible en custom/ingadhoc-adhoc-way/ — capa Usuario/Workspace no instaladas."
-    echo "  Para activarlas: clonar git@github.com:ingadhoc/adhoc-way en data/custom/ingadhoc-adhoc-way."
+    echo "AVISO: adhoc-way no encontrado — capa Usuario/Workspace no instaladas."
+    echo "  Buscado en: custom/adhoc-way-ctx/adhoc-way/, custom/ingadhoc-adhoc-way/, src/adhoc-way-ctx/adhoc-way/."
 fi
 
 # DevOps workspace context — Eje 2 + Eje 3 de devops-workspace-context spec

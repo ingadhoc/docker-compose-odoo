@@ -20,6 +20,7 @@
 
   "shutdownAction": "stopCompose",
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
+  "postStartCommand": "/scripts/share-claude-sessions.sh > /tmp/postStartCommand.log 2>&1",
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user",
