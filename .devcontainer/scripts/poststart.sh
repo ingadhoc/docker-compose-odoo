@@ -544,38 +544,41 @@ else
     echo "  Buscado en: custom/adhoc-way-ctx/adhoc-way/, custom/ingadhoc-adhoc-way/, src/adhoc-way-ctx/adhoc-way/."
 fi
 
-# DevOps workspace context — Eje 2 + Eje 3 de devops-workspace-context spec
-# (ingadhoc/devops-specs, ver custom/devops-ctx/devops-specs/specs/10_draft/
-# devops-workspace-context.md una vez baked).
+# Contextos opcionales `custom/<scope>-ctx/` — patrón generalizado
+# (ingadhoc/adhoc-way#62 spec madre `contextos-opcionales-en-custom.md`).
 #
-# Activa el módulo cuando el user pertenece al team "devops" (línea en
-# ~/.adhoc/teams, generado por adhoc-way-install-user.sh a partir de user.md).
-# Idempotente: clones nuevos al primer rebuild; fetch a los existentes después.
-init_devops_ctx() {
+# `ensure_ctx_clones` es helper genérico: detecta team key en
+# ~/.adhoc/teams, crea custom/<ctx_name>/, y clona/fetcha la lista de
+# repos pasada como argumento. Idempotente: clone si falta, fetch si está.
+#
+# Cada bundle tiene su `init_<scope>_ctx` que define la lista de repos y
+# escribe el AGENTS.md + README.md con contenido específico.
+#
+# Bundles soportados hoy:
+# - devops-ctx (team key `devops`) — spec en ingadhoc/devops-specs (PR #6).
+# - adhoc-way-ctx (team key `adhoc-way`) — spec en ingadhoc/adhoc-way#62.
+# - tuqui-ctx (team key `tuqui`) — pendiente validación team Tuqui (spec
+#   en ingadhoc/adhoc-way#62, sección `tuqui-ctx.md`).
+ensure_ctx_clones() {
+    local team_key="$1"
+    local ctx_name="$2"
+    shift 2
+    # remaining args: entries "name|url" (branch siempre main por default)
+
     local teams_file="$HOME/.adhoc/teams"
-    if [ ! -f "$teams_file" ] || ! grep -q "^devops$" "$teams_file"; then
-        return 0
+    if [ ! -f "$teams_file" ] || ! grep -q "^${team_key}$" "$teams_file"; then
+        return 1
     fi
-    echo "Team DevOps detectado en $teams_file — inicializando custom/devops-ctx/"
+    echo "Team ${team_key} detectado en ${teams_file} — inicializando custom/${ctx_name}/"
 
-    local devops_ctx="$HOME/custom/devops-ctx"
-    mkdir -p "$devops_ctx"
+    local ctx_dir="$HOME/custom/${ctx_name}"
+    mkdir -p "$ctx_dir"
 
-    # Repos default (6) — ver spec devops-workspace-context Eje 2.
-    # 5 infra core + devops-specs (la categoría "Specs del team").
-    local -a default_repos=(
-        "oci-odoo-by-adhoc|git@github.com:adhoc-cicd/oci-odoo-by-adhoc.git"
-        "helm-charts|git@github.com:adhoc-dev/helm-charts.git"
-        "devops-cloud-infra|git@github.com:ingadhoc/devops-cloud-infra.git"
-        "devops-ops-tools|git@github.com:ingadhoc/devops-ops-tools.git"
-        "pylib_odoo_saas|git@github.com:ingadhoc/pylib_odoo_saas.git"
-        "devops-specs|git@github.com:ingadhoc/devops-specs.git"
-    )
-
-    for entry in "${default_repos[@]}"; do
+    local count=0
+    for entry in "$@"; do
         local repo_name="${entry%%|*}"
         local repo_url="${entry##*|}"
-        local dest="$devops_ctx/$repo_name"
+        local dest="$ctx_dir/$repo_name"
         if [ ! -d "$dest/.git" ]; then
             echo "  Clonando $repo_name..."
             git clone --depth=20 "$repo_url" "$dest" 2>&1 | tail -1 || \
@@ -584,9 +587,30 @@ init_devops_ctx() {
             (cd "$dest" && git fetch --quiet origin 2>/dev/null) || \
                 echo "  AVISO: fetch $repo_name falló (skipping)"
         fi
+        count=$((count + 1))
     done
 
-    # Mini-wiki (Eje 3) — bloque managed, regenerado en cada poststart.
+    echo "  custom/${ctx_name}/ OK (${count} repos default)."
+    return 0
+}
+
+# Activa devops-ctx cuando ~/.adhoc/teams contiene `devops`.
+# Spec: ingadhoc/devops-specs `specs/10_draft/devops-workspace-context.md`.
+init_devops_ctx() {
+    # Repos default (6) — 5 infra core + devops-specs.
+    local -a repos=(
+        "oci-odoo-by-adhoc|git@github.com:adhoc-cicd/oci-odoo-by-adhoc.git"
+        "helm-charts|git@github.com:adhoc-dev/helm-charts.git"
+        "devops-cloud-infra|git@github.com:ingadhoc/devops-cloud-infra.git"
+        "devops-ops-tools|git@github.com:ingadhoc/devops-ops-tools.git"
+        "pylib_odoo_saas|git@github.com:ingadhoc/pylib_odoo_saas.git"
+        "devops-specs|git@github.com:ingadhoc/devops-specs.git"
+    )
+    ensure_ctx_clones "devops" "devops-ctx" "${repos[@]}" || return 0
+
+    local devops_ctx="$HOME/custom/devops-ctx"
+
+    # Mini-wiki (Eje 3) — regenerado en cada poststart.
     cat > "$devops_ctx/AGENTS.md" <<'AGENTS_MD'
 # DevOps context — stack Adhoc
 
@@ -700,6 +724,8 @@ PR), no por reflejo. Cualquier `odoo_create` / `odoo_write` /
 
 ## Otros contextos relacionados (no acá)
 
+- `custom/adhoc-way-ctx/` — bundle del meta-flujo Adhoc (si tenés team
+  `adhoc-way` en `~/.adhoc/teams`).
 - `custom/it-ctx/` — herramientas del equipo de sistemas del cliente
   interno (`devops-apt-repository`, `adhocCli`/`r2`, `ansible_notebooks`).
   Spec: `devops-specs/specs/10_draft/internal-team-context.md`.
@@ -774,6 +800,141 @@ README_MD
     echo "  custom/devops-ctx/ OK (6 repos default + AGENTS.md + CLAUDE.md + GEMINI.md + README.md)."
 }
 init_devops_ctx
+
+# Activa adhoc-way-ctx cuando ~/.adhoc/teams contiene `adhoc-way`.
+# Spec: ingadhoc/adhoc-way#62 `specs/10_draft/adhoc-way-ctx.md`.
+init_adhoc_way_ctx() {
+    # Repos default (4) — meta-flujo del ecosistema Adhoc.
+    local -a repos=(
+        "adhoc-way|git@github.com:ingadhoc/adhoc-way.git"
+        "oba-wiki|git@github.com:ingadhoc/oba-wiki.git"
+        "skills|git@github.com:ingadhoc/skills.git"
+        "adhoc-brand-kit|git@github.com:ingadhoc/adhoc-brand-kit.git"
+    )
+    ensure_ctx_clones "adhoc-way" "adhoc-way-ctx" "${repos[@]}" || return 0
+
+    local ctx="$HOME/custom/adhoc-way-ctx"
+
+    cat > "$ctx/AGENTS.md" <<'AGENTS_MD'
+# adhoc-way context — meta-flujo Adhoc
+
+Activado automáticamente por `poststart.sh` cuando `~/.adhoc/teams`
+contiene `adhoc-way`. Spec madre del patrón:
+`adhoc-way/specs/10_draft/contextos-opcionales-en-custom.md`. Spec
+instance: `adhoc-way/specs/10_draft/adhoc-way-ctx.md`.
+
+## Repos en este folder
+
+- `adhoc-way` (`ingadhoc/`) — meta-repo del Adhoc Dev-Harness.
+  Convenciones canónicas, specs, ADRs, scripts (`adhoc-way-install-user.sh`).
+  Master de las reglas que aplican cross-repo del ecosistema.
+- `oba-wiki` (`ingadhoc/`) — wiki de productos y módulos Odoo by Adhoc.
+  Estructura `wiki/<version>/<categoría>/<producto>/<módulo>.md`. Generada
+  por el proceso `adhoc-product-wiki` (módulo Odoo); no editar a mano
+  para casos no-puntuales — preferir regenerar desde el producto.
+- `skills` (`ingadhoc/`) — catálogo cross-vendor de skills CLI (Claude
+  Code, Codex, Gemini, Copilot). Catálogo declarativo en `skills.yaml`.
+- `adhoc-brand-kit` (`ingadhoc/`) — assets de marca (logos, paletas,
+  plantillas). Spec 0013. Pesa ~277 MB; acceso preferente via skill
+  `adhoc-brand` (lectura on-demand) más que árbol pleno.
+
+## Convenciones del meta-flujo
+
+- **Specs y ADRs** del propio adhoc-way viven en `adhoc-way/specs/` y
+  `adhoc-way/decisions/`. Workflow: `10_draft/` → `20_ready/` →
+  `30_done/NNNN-<slug>.md`. Numeración solo al pasar a done.
+- **Wiki regenerable:** `oba-wiki/wiki/<v>/` es output del módulo
+  `adhoc-product-wiki` en Odoo. Para cambios persistentes, editar el
+  producto en Adhoc y regenerar.
+- **Skills CLI:** instalar con `npx skills experimental_install` desde
+  la raíz del workspace. User-level vs project-level según ADR 0014.
+- **Brand kit:** los assets son grandes (277 MB) — agentes IA leen via
+  skill `adhoc-brand` salvo que necesiten manipular binarios. Spec 0013.
+
+## Otros contextos relacionados (no acá)
+
+- `custom/oba-specs/` o `custom/ingadhoc-oba-specs/` — specs de
+  productos OBA. **Queda top-level** porque la usa todo dev OBA, no solo
+  los del meta-flujo.
+- `custom/devops-ctx/` — bundle DevOps (si el dev tiene team `devops`).
+  Spec madre en `devops-specs`.
+- `custom/tuqui-ctx/` — bundle Tuqui / AI (si el dev tiene team `tuqui`,
+  pendiente implementación + validación team Tuqui).
+- `src/adhoc-way-ctx/` — fallback baked (`adhoc-way` + `oba-wiki`) para
+  devs sin team `adhoc-way` activo — read-only via el router de PR #41.
+
+---
+
+_Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh`._
+AGENTS_MD
+
+    # CLAUDE.md y GEMINI.md — punteros cortos a AGENTS.md (ADR 0001 adhoc-way).
+    cat > "$ctx/CLAUDE.md" <<'CLAUDE_MD'
+# CLAUDE.md
+
+Este folder adopta **[`AGENTS.md`](./AGENTS.md)** como fuente canónica
+de instrucciones para agentes de IA (ADR 0001 adhoc-way).
+
+> Antes de responder cualquier mensaje en este folder, leé `AGENTS.md`
+> y aplicá sus instrucciones. Esta carga manual es necesaria porque
+> Claude Code auto-carga solo `CLAUDE.md`, no `AGENTS.md`.
+
+Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh`.
+CLAUDE_MD
+
+    cat > "$ctx/GEMINI.md" <<'GEMINI_MD'
+# GEMINI.md
+
+Este folder adopta **[`AGENTS.md`](./AGENTS.md)** como fuente canónica
+de instrucciones para agentes de IA (ADR 0001 adhoc-way).
+
+Antes de responder, leé `AGENTS.md` y aplicá sus instrucciones.
+
+Este archivo es regenerado en cada `poststart.sh`. Para editarlo
+permanentemente, modificar el heredoc en `.devcontainer/scripts/
+poststart.sh`.
+GEMINI_MD
+
+    cat > "$ctx/README.md" <<'README_MD'
+# adhoc-way-ctx
+
+Folder de contexto del meta-flujo Adhoc en el devcontainer OBA. Generado
+automáticamente por `.devcontainer/scripts/poststart.sh` cuando
+`~/.adhoc/teams` contiene `adhoc-way`.
+
+## Cómo regenerar
+
+```bash
+refresh-workspace      # re-aplica capa Usuario/Workspace adhoc-way
+# o
+git fetch              # en cada subrepo individualmente
+```
+
+Para regenerar los clones (fresh): `rm -rf custom/adhoc-way-ctx/<repo>`
+y rebuild.
+
+## Cómo desactivar
+
+Sacar la línea `adhoc-way` de `~/.adhoc/teams` (host). En la próxima
+rebuild, el folder queda intacto pero no se actualizan los clones.
+
+Devs sin team `adhoc-way` activo siguen viendo `adhoc-way` y `oba-wiki`
+baked en `/home/odoo/src/adhoc-way-ctx/` (read-only fallback).
+README_MD
+
+    echo "  custom/adhoc-way-ctx/ OK (4 repos default + AGENTS.md + CLAUDE.md + GEMINI.md + README.md)."
+}
+init_adhoc_way_ctx
+
+# Activa tuqui-ctx cuando ~/.adhoc/teams contiene `tuqui`.
+# Pendiente: validación cruzada con team Tuqui para confirmar set
+# definitivo de repos, orgs/URLs (algunas viven en Tuqui-AI/ org) y wiki
+# seed. Spec: `adhoc-way/specs/10_draft/tuqui-ctx.md` (ingadhoc/adhoc-way#62).
+# init_tuqui_ctx() — placeholder, no implementado todavía.
 
 # Allow-list base de Claude Code (operaciones read-only) — reduce prompts
 # durante demos / análisis. Idempotente: solo escribe si no existe el archivo.
