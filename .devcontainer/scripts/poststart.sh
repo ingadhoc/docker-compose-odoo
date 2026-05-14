@@ -196,6 +196,43 @@ EOF
 }
 build_workspace
 
+# Compartir sesiones de Claude Code host↔container.
+# Claude encoda el path absoluto del workspace en el nombre del dir bajo
+# ~/.claude/projects/. Host (/home/<user>/odoo/<v>/data/custom/<rest>) y
+# container (/home/odoo/custom/<rest>) generan nombres distintos:
+#   Host:      -home-<user>-odoo-<v>-data-custom-<rest>
+#   Container: -home-odoo-custom-<rest>
+# Para que `/resume` adentro del container vea las sesiones del host, creamos
+# un symlink desde el nombre del container al del host para cada proyecto
+# bajo el workspace OBA. Como ~/.claude/projects/ está bind-mounteado al host,
+# nuevas sesiones (desde cualquier lado) caen en el dir real del host —
+# bidireccional sin overhead.
+# Iterar el listado en cada poststart deja al día los proyectos que el dev
+# abrió en el host antes del rebuild.
+share_claude_sessions() {
+    local projects_dir="$HOME/.claude/projects"
+    [ -d "$projects_dir" ] || return 0
+    local linked=0
+    for host_proj in "$projects_dir"/*; do
+        [ -d "$host_proj" ] || continue
+        [ -L "$host_proj" ] && continue
+        local host_name
+        host_name=$(basename "$host_proj")
+        if [[ "$host_name" =~ ^-home-[^-]+-odoo-[0-9a-zA-Z]+-data-custom-(.+)$ ]]; then
+            local rest="${BASH_REMATCH[1]}"
+            local container_name="-home-odoo-custom-$rest"
+            if [ "$host_name" != "$container_name" ] && [ ! -e "$projects_dir/$container_name" ]; then
+                ln -s "$host_name" "$projects_dir/$container_name"
+                (( linked++ )) || true
+            fi
+        fi
+    done
+    if [ "$linked" -gt 0 ]; then
+        echo "Sesiones Claude host↔container: $linked symlink(s) nuevo(s) en $projects_dir."
+    fi
+}
+share_claude_sessions
+
 # workspace-add / workspace-rm — comandos para traer/sacar repos de src/ bajo demanda
 WORKSPACE_ADD="$HOME/.local/bin/workspace-add"
 cat > "$WORKSPACE_ADD" <<'SCRIPT'
