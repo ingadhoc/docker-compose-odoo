@@ -48,12 +48,33 @@ build_workspace() {
     # adhoc-way, oba-wiki, oba-specs, ingadhoc-skills, etc., y también
     # overrides de baked como odoo/ o enterprise/ si el dev los clona).
     # Se listan dinámicos en AGENTS.md para reflejar qué clonó cada dev.
+    # Excluye los contextos *-ctx — esos se listan en sección router aparte.
     declare -A custom_others
     for d in "$CUSTOM"/*/; do
         [[ -d "$d" ]] || continue
         name=$(basename "$d")
         [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
+        [[ $name == *-ctx ]] && continue
         custom_others[$name]=1
+    done
+
+    # Contextos (folders *-ctx) — detección "custom gana, src fallback".
+    # Pattern documentado en T-67744: el agente IA detecta qué contextos
+    # están disponibles y a qué path apuntan. El dev NO ve el contexto en
+    # su workspace (no se symlinkea al top-level) salvo que lo clone
+    # explícito en custom/. Si el contexto solo existe en src/ (baked en la
+    # imagen), el path en el router apunta directo a src/<X-ctx>/.
+    declare -A contexts
+    for item in "$CUSTOM"/*-ctx/; do
+        [[ -d "$item" ]] || continue
+        name=$(basename "$item")
+        contexts[$name]="${item%/}"
+    done
+    for item in "$SRC"/*-ctx/; do
+        [[ -d "$item" ]] || continue
+        name=$(basename "$item")
+        [[ -n "${contexts[$name]:-}" ]] && continue
+        contexts[$name]="${item%/}"
     done
 
     # src/ — espejo de /home/odoo/src/: solo repos con .git, deduplicados contra custom/
@@ -83,11 +104,44 @@ build_workspace() {
 
     # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar adhoc-way)
     {
-        cat <<'HEADER'
+        cat <<'INTRO'
 # Workspace OBA
 
 Iniciá `claude`, `codex` o `gemini` desde `/home/odoo/custom/` para trabajo cross-repo.
 Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
+
+## Modos de trabajo (router de contextos)
+
+Al pararte acá con un agente IA, elegí el modo según el tema. Los contextos se detectan automáticamente — `custom/<X-ctx>/` (clonado por el dev) gana sobre `/home/odoo/src/<X-ctx>/` (baked en la imagen). El dev no ve el contexto en su workspace salvo que lo clone explícito; el agente sí sabe que existe via este listado.
+
+INTRO
+        if [[ ${#contexts[@]} -eq 0 ]]; then
+            echo "_Sin contextos detectados todavía._"
+        else
+            for name in $(echo "${!contexts[@]}" | tr ' ' '\n' | sort); do
+                path="${contexts[$name]}"
+                base="${name%-ctx}"
+                case "$name" in
+                    adhoc-way-ctx)
+                        desc="onboarding al patrón adhoc-way, convenciones del ecosistema, specs, ADRs (subdirs: adhoc-way, oba-wiki)"
+                        ;;
+                    devops-ctx)
+                        desc="tareas DevOps: k8s/Pulumi, charts Helm, OCI bake, herramientas internas"
+                        ;;
+                    *)
+                        desc=""
+                        ;;
+                esac
+                if [[ -n "$desc" ]]; then
+                    echo "- **$base** ($desc): \`$path/\`"
+                else
+                    echo "- **$base**: \`$path/\`"
+                fi
+            done
+        fi
+        cat <<'STRUCT'
+
+**Default** (sin contexto explícito): módulos OBA, tareas Tuqui, debugging Odoo. Seguir lo que sigue en este AGENTS.md.
 
 ## Estructura
 
@@ -98,7 +152,7 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 
 ## Repos en custom/ (fuera de repositories/ y src/)
 
-HEADER
+STRUCT
         if [[ ${#custom_others[@]} -eq 0 ]]; then
             echo "_Ninguno todavía._"
         else
