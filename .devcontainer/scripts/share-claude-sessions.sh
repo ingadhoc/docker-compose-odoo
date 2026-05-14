@@ -26,6 +26,8 @@ PROJECTS_DIR="$HOME/.claude/projects"
 [ -d "$PROJECTS_DIR" ] || exit 0
 
 linked=0
+merged=0
+warned=0
 for host_proj in "$PROJECTS_DIR"/*; do
     [ -d "$host_proj" ] || continue
     [ -L "$host_proj" ] && continue
@@ -38,17 +40,43 @@ for host_proj in "$PROJECTS_DIR"/*; do
             # `<rest>` incluye su `-` líder, o queda vacío si es top-level
             rest="${host_name#*-data-custom}"
             container_name="-home-odoo-custom${rest}"
-            if [ "$host_name" != "$container_name" ] && [ ! -e "$PROJECTS_DIR/$container_name" ]; then
-                # `--` separa flags del target — `$host_name` empieza con `-`
-                # (es un dir encoded), si no, ln lo trata como opción y falla
-                # con `invalid option -- 'h'`.
-                ln -s -- "$host_name" "$PROJECTS_DIR/$container_name"
-                linked=$((linked + 1))
+            [ "$host_name" = "$container_name" ] && continue
+
+            container_path="$PROJECTS_DIR/$container_name"
+
+            # Caso 1: ya es symlink → idempotente, skip.
+            if [ -L "$container_path" ]; then
+                continue
             fi
+
+            # Caso 2: existe como dir real (container creó sessions ahí
+            # antes de tener el symlink). Mergear contenido al dir del host
+            # y eliminar el dir real, después crear el symlink. No hay caso
+            # donde priorizaríamos sessions del container sobre las del
+            # host compartido — siempre queremos symlink.
+            if [ -d "$container_path" ]; then
+                # `mv -n` (no-clobber) evita pisar archivos del host. En la
+                # práctica los SESSION-ID.jsonl son únicos, no debería haber
+                # colisiones. Si alguna queda, rmdir falla y el script avisa.
+                mv -n "$container_path"/* "$host_proj"/ 2>/dev/null || true
+                mv -n "$container_path"/.[!.]* "$host_proj"/ 2>/dev/null || true
+                if rmdir "$container_path" 2>/dev/null; then
+                    merged=$((merged + 1))
+                else
+                    echo "share-claude-sessions: WARN — $container_path tiene archivos en conflicto con $host_proj, no se mergeó. Revisar manual." >&2
+                    warned=$((warned + 1))
+                    continue
+                fi
+            fi
+
+            # Caso 3 (o post-merge): crear symlink. `--` separa flags porque
+            # $host_name empieza con `-` y ln lo trataría como opción.
+            ln -s -- "$host_name" "$container_path"
+            linked=$((linked + 1))
             ;;
     esac
 done
 
-if [ "$linked" -gt 0 ]; then
-    echo "share-claude-sessions: $linked symlink(s) nuevo(s) en $PROJECTS_DIR."
+if [ "$linked" -gt 0 ] || [ "$merged" -gt 0 ] || [ "$warned" -gt 0 ]; then
+    echo "share-claude-sessions: $merged dir(s) mergeado(s) + $linked symlink(s) creado(s) + $warned warning(s) en $PROJECTS_DIR."
 fi
