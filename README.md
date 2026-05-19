@@ -40,7 +40,7 @@ Convención de paths host por defecto:
 - `${HOME}/repositorios/adhoc-way/` → `/home/odoo/custom/adhoc-way`
 - `${HOME}/tuqui/`                  → `/home/odoo/custom/tuqui` (extra)
 
-`poststart.sh` detecta automáticamente los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md`, los lista en `custom/AGENTS.md` y corre hooks opcionales por proyecto si existen (`<proyecto>/scripts/devcontainer-postcontainer.sh`).
+`poststart.sh` detecta automáticamente los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md` y los lista en `custom/AGENTS.md` consolidado del workspace. No ejecuta código del proyecto automáticamente (opt-in explícito si emerge necesidad — ver `for_each_mounted_project` en poststart.sh).
 
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 

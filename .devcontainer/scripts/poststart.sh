@@ -119,11 +119,12 @@ INTRO
 ## Estructura
 
 - **`repositories/`:** repos del dev con módulos Odoo (editables, branch activa).
-- **Otros repos clonados directo en `custom/`:** repos del ecosistema (`adhoc-way`, `oba-wiki`, `oba-specs`, `ingadhoc-skills`, etc.) y/o overrides de baked (`odoo`, `enterprise`). Listado efectivo abajo.
+- **Proyectos del ecosistema mounteados:** ver sección "Modos de trabajo" arriba (`custom/<proyecto>/` con `AGENTS.md` propio, declarado en `docker-compose.override.yml`).
+- **Otros repos en `custom/`:** clones directos del dev sin `AGENTS.md` (overrides de baked como `odoo`/`enterprise`, repos puntuales). Listado efectivo abajo.
 - **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
   - `src/repositories/`: repos baked no en `repositories/`.
 
-## Repos en custom/ (fuera de repositories/ y src/)
+## Otros repos en custom/ (sin AGENTS.md, fuera de repositories/ y src/)
 
 STRUCT
         if [[ ${#custom_others[@]} -eq 0 ]]; then
@@ -532,23 +533,28 @@ fi
 # Sin compat hacia atrás con paths legacy `custom/<project>-ctx/` (decisión
 # §6 #14): JJS y AZ adaptan sus setups locales post-merge.
 #
-# Helper genérico: itera `custom/<project>/` con `AGENTS.md` y ejecuta el
-# hook opcional `<project>/scripts/devcontainer-postcontainer.sh` si existe
-# (convención sugerida — cada proyecto decide si lo provee). El AGENTS.md
-# consolidado del workspace lo regenera `build_workspace` aparte.
+# Helper genérico: itera `custom/<project>/` con `AGENTS.md` y registra
+# qué proyectos están activos. El AGENTS.md consolidado del workspace lo
+# regenera `build_workspace` aparte.
+#
+# Decisión sobre hooks opt-in:
+#   Se evaluó ejecutar automáticamente `<project>/scripts/devcontainer-
+#   postcontainer.sh` por cada proyecto detectado, pero eso permitiría
+#   ejecución implícita de código desde cualquier repo mounteado en
+#   `custom/` con un AGENTS.md. Aun cuando los mounts vienen del host
+#   del dev (su threat model propio), preferimos opt-in explícito antes
+#   de habilitar auto-ejecución. Si emerge necesidad concreta, sumar
+#   declaración explícita por proyecto en docker-compose.override.yml o
+#   en una whitelist ~/.adhoc/.
 for_each_mounted_project() {
     local count=0
+    local d name
     for d in "$HOME/custom"/*/; do
         [[ -d "$d" ]] || continue
         name=$(basename "$d")
         [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
         [[ -f "$d/AGENTS.md" ]] || continue
         echo "  Proyecto mounteado: $name ($d)"
-        local hook="$d/scripts/devcontainer-postcontainer.sh"
-        if [ -x "$hook" ]; then
-            echo "    Ejecutando hook $hook"
-            "$hook" || echo "    AVISO: hook $hook falló (continuando)"
-        fi
         count=$((count + 1))
     done
     echo "for_each_mounted_project: $count proyecto(s) detectado(s)."
