@@ -23,6 +23,27 @@ cd ctx
 devcontainer open ~/odoo/18
 ```
 
+## Opt-in mounts de proyectos del ecosistema adhoc-way
+
+Los proyectos del ecosistema (`devops`, `adhoc-way`, `tuqui`) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount opt-in. Cada dev decide qué proyectos quiere ver montados.
+
+**Cómo activarlo:**
+
+```sh
+cp docker-compose.override.yml.example docker-compose.override.yml
+# editar, descomentar los mounts que necesites
+```
+
+Convención de paths host por defecto:
+
+- `${HOME}/repositorios/devops/`    → `/home/odoo/custom/devops`
+- `${HOME}/repositorios/adhoc-way/` → `/home/odoo/custom/adhoc-way`
+- `${HOME}/tuqui/`                  → `/home/odoo/custom/tuqui` (extra)
+
+`poststart.sh` detecta automáticamente los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md`, los lista en `custom/AGENTS.md` y corre hooks opcionales por proyecto si existen (`<proyecto>/scripts/devcontainer-postcontainer.sh`).
+
+Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
+
 ## Odoo source code
 
 Inside the devcontainer you have available a "src" folder that is a link to src folder inside the container.
