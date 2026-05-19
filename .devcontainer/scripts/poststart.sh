@@ -372,7 +372,15 @@ fi
 SKILL="odoo-${ODOO_V}"
 SKILL_PATH=".agents/"
 
-# ingadhoc/skills — catálogo interno
+# ingadhoc/skills — catálogo interno (solo skills de dominio Odoo +
+# product-sdd). Las skills universales del ecosistema
+# (adhoc-way-bootstrap, adhoc-way-pr-flow, adhoc-way-contribute) migraron
+# al repo `ingadhoc/adhoc-way/skills/` con prefijo `adhoc-way-`
+# (versions.json#canonical_skills_meta de adhoc-way es fuente de verdad
+# post-migración). Se instalan via bake user-level en la imagen OCI dev
+# (PR adhoc-cicd/oci-odoo-by-adhoc#33). En containers que no tengan ese
+# bake disponible todavía, los agentes pueden seguir usando el binario
+# `adhoc-way` para iniciar la capa Usuario manualmente.
 INGADHOC_REPO="git@github.com:ingadhoc/skills.git"
 INGADHOC_SKILLS=(
     # Odoo dev core
@@ -389,9 +397,6 @@ INGADHOC_SKILLS=(
     "odoo-video-to-docs"        # docs desde video — alto uso real (Academy)
     # SDD / specs
     "product-sdd"
-    # Universales del ecosistema
-    "adhoc-way-bootstrap"       # bootstrap de repo nuevo con patrón adhoc-way
-    "adhoc-pr-flow"             # detecta caso PR (4 casos post-ADR 0014) y ejecuta
 )
 
 # Skills externas (formato "repo|skill"; el separador `|` evita colisionar
