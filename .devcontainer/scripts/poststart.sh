@@ -476,45 +476,56 @@ else
     rm "$LOG_FILE" || true
 fi
 
-# Convenciones Adhoc adentro del container — capa Usuario + capa Workspace.
-# El repo adhoc-way se mountea opt-in desde host vía docker-compose.override.
-# yml (convención §6 #12: `${HOME}/repositorios/adhoc-way` → `custom/adhoc-way`).
-# Sin compat hacia atrás con paths legacy `custom/adhoc-way-ctx/adhoc-way/` ni
-# baked `src/adhoc-way/` — decisión §6 #14 del spec OBA bake.
+# Convenciones Adhoc adentro del container — capa Usuario.
 #
-# - Capa Usuario  (--target $HOME): bloque managed en ~/.claude/CLAUDE.md,
-#   ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md y ~/.adhoc/conventions.md.
-# - Capa Workspace (--target $HOME/custom --workspace-block-only): bloque
-#   managed con reglas operativas (uso de tuqui, skills, path /home/odoo/shared)
-#   inyectado al final del AGENTS.md que generó build_workspace. NO toca
-#   .claude/.codex/.gemini/.adhoc/ en custom/ (esos no deben existir ahí).
-#   Spec 0012 Eje 3.
-ADHOC_WAY_INSTALL="$HOME/custom/adhoc-way/scripts/adhoc-way-install-user.sh"
-if [ -x "$ADHOC_WAY_INSTALL" ]; then
-    echo "Instalando capa Usuario desde $ADHOC_WAY_INSTALL (target=\$HOME)"
-    "$ADHOC_WAY_INSTALL" --target "$HOME" && echo "Capa Usuario OK."
+# El script legacy `adhoc-way-install-user.sh` que aplicaba ambas capas
+# (Usuario + Workspace) fue eliminado en Paso 5 del rollout cross-vendor
+# (PR ingadhoc/adhoc-way#115, mergeado). Se reemplaza por el binario
+# `adhoc-way` (npm-installed, decisión §6 #16 del spec OBA bake en
+# ingadhoc/adhoc-way#99). El binario:
+#
+#   - Se instala global en el bake de la imagen OCI dev
+#     (adhoc-cicd/oci-odoo-by-adhoc#33), disponible en /usr/local/bin/
+#     accesible para el usuario odoo via $PATH.
+#   - Materializa la capa Usuario (~/.adhoc/conventions.md, user.json,
+#     state.json + hooks user-level en .claude/.codex/.gemini) con
+#     `adhoc-way init --user-json '{...}'`.
+#   - El init lo dispara un agente IA con `tuqui_context` cargado, NO
+#     este poststart — el bake no tiene datos del dev concreto
+#     (decisión §6 #8 del spec).
+if command -v adhoc-way >/dev/null 2>&1; then
+    echo "Binario adhoc-way disponible: $(command -v adhoc-way) ($(adhoc-way --version 2>/dev/null || echo 'version desconocida'))"
+    echo "  La capa Usuario la dispara un agente IA con tuqui_context cargado via 'adhoc-way init --user-json ...'"
+else
+    echo "AVISO: binario adhoc-way no instalado."
+    echo "  Imagen dev OCI ≥ 2026-05 (adhoc-cicd/oci-odoo-by-adhoc#33 mergeado) trae el binario baked."
+    echo "  Alternativa manual: 'npm install -g github:ingadhoc/adhoc-way' como root."
+    echo "  Una vez disponible: 'adhoc-way init --user-json ...' desde un agente IA con tuqui_context."
+fi
 
-    echo "Aplicando bloque de capa Workspace en custom/AGENTS.md"
-    "$ADHOC_WAY_INSTALL" --target "$HOME/custom" --workspace-block-only \
-        && echo "Capa Workspace OK." \
-        || echo "AVISO: capa Workspace falló (script viejo? requiere flag --workspace-block-only)."
-
-    # Wrapper refresh-workspace para re-aplicar ambas capas sin rebuild
-    REFRESH_BIN="$HOME/.local/bin/refresh-workspace"
-    cat > "$REFRESH_BIN" <<EOF
+# Wrapper refresh-workspace — re-aplica la capa Usuario sin rebuild del
+# devcontainer. Re-lee el user.json materializado por el init previo (lo
+# generó el agente IA con tuqui_context). Útil cuando se actualizó la
+# versión de conventions del paquete adhoc-way y el dev quiere bajar el
+# bloque managed sin esperar la próxima sesión.
+REFRESH_BIN="$HOME/.local/bin/refresh-workspace"
+mkdir -p "$(dirname "$REFRESH_BIN")"
+cat > "$REFRESH_BIN" <<'REFRESH_EOF'
 #!/bin/bash
 set -e
-"$ADHOC_WAY_INSTALL" --target "\$HOME" "\$@"
-"$ADHOC_WAY_INSTALL" --target "\$HOME/custom" --workspace-block-only "\$@"
-EOF
-    chmod +x "$REFRESH_BIN"
-    echo "refresh-workspace disponible en $REFRESH_BIN"
-else
-    echo "AVISO: adhoc-way no encontrado en custom/adhoc-way/ — capa Usuario/Workspace no instaladas."
-    echo "  Activá el mount opt-in en docker-compose.override.yml (ver docker-compose.override.yml.example)"
-    echo "  o instalá el binario \`adhoc-way\` global (ya disponible en la imagen dev OCI ≥ 2026-05)"
-    echo "  e invocá \`adhoc-way init --user-json '{...}'\` desde un agente IA con tuqui_context cargado."
+USER_JSON="$HOME/.adhoc/user.json"
+if [ ! -f "$USER_JSON" ]; then
+    echo "ERROR: $USER_JSON no existe — corré primero 'adhoc-way init --user-json ...' desde un agente IA con tuqui_context cargado." >&2
+    exit 1
 fi
+if ! command -v adhoc-way >/dev/null 2>&1; then
+    echo "ERROR: binario adhoc-way no instalado — ver imagen dev OCI ≥ 2026-05 (adhoc-cicd/oci-odoo-by-adhoc#33) o instalá con 'npm install -g github:ingadhoc/adhoc-way'." >&2
+    exit 1
+fi
+exec adhoc-way init --user-json "$(cat "$USER_JSON")" "$@"
+REFRESH_EOF
+chmod +x "$REFRESH_BIN"
+echo "refresh-workspace disponible en $REFRESH_BIN"
 
 # Detección de proyectos del ecosistema mounteados (modelo opt-in via
 # docker-compose.override.yml, decisión §6 #11-#15 del spec OBA bake en
