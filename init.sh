@@ -105,7 +105,6 @@ mkdir -p \
     "$HOME/.gemini" \
     "$HOME/.agents" \
     "$HOME/.config/gh" \
-    "$HOME/odoo-shared" \
     "$HOME/.adhoc"
 if [ ! -f "$HOME/.claude.json" ]; then
     echo '{"hasCompletedOnboarding":true,"numStartups":5,"installMethod":"npm","autoUpdates":true}' \

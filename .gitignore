@@ -12,6 +12,10 @@ data/custom/*
 data/default
 tmp/*
 docker-compose.override.yml
+# Auto-generado por .devcontainer/scripts/discover-mounts.sh en cada rebuild
+# (initializeCommand). Per-machine — refleja qué paths del ecosistema existen
+# en el host de cada dev.
+docker-compose.auto-mounts.yml
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
 !.devcontainer/workspace/.gitkeep

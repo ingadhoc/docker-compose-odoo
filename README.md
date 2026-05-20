@@ -23,24 +23,20 @@ cd ctx
 devcontainer open ~/odoo/18
 ```
 
-## Opt-in mounts de proyectos del ecosistema adhoc-way
+## Mounts auto-detectados de proyectos del ecosistema adhoc-way
 
-Los proyectos del ecosistema (`devops`, `adhoc-way`, `tuqui`) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount opt-in. Cada dev decide qué proyectos quiere ver montados.
+Los proyectos del ecosistema (`devops`, `adhoc-way`, `tuqui`, y el propio `docker-compose-odoo`) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
 
-**Cómo activarlo:**
-
-```sh
-cp docker-compose.override.yml.example docker-compose.override.yml
-# editar, descomentar los mounts que necesites
-```
-
-Convención de paths host por defecto:
+Convención de paths host por defecto (catálogo embebido en `discover-mounts.sh`):
 
 - `${HOME}/repositorios/devops/`    → `/home/odoo/custom/devops`
 - `${HOME}/repositorios/adhoc-way/` → `/home/odoo/custom/adhoc-way`
-- `${HOME}/tuqui/`                  → `/home/odoo/custom/tuqui` (extra)
+- `${HOME}/tuqui/`                  → `/home/odoo/custom/tuqui`
+- `<self>` (este repo)              → `/home/odoo/custom/devops/docker-compose-odoo` (requiere `devops` presente)
 
-`poststart.sh` detecta automáticamente los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md` y los lista en `custom/AGENTS.md` consolidado del workspace. No ejecuta código del proyecto automáticamente (opt-in explícito si emerge necesidad — ver `for_each_mounted_project` en poststart.sh).
+Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo fuera del catálogo, usá `docker-compose.override.yml` (opt-in manual, gitignored).
+
+`poststart.sh` corre adentro del container y registra los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md` para listarlos en el AGENTS.md consolidado del workspace. No ejecuta código del proyecto automáticamente.
 
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 

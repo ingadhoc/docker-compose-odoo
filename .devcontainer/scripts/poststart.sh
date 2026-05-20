@@ -101,11 +101,11 @@ Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
 
 ## Modos de trabajo (proyectos del ecosistema mounteados)
 
-Al pararte acá con un agente IA, elegí el modo según el tema. Los proyectos del ecosistema declarados como opt-in en `docker-compose.override.yml` aparecen como `custom/<proyecto>/` con su `AGENTS.md` propio (que viene committeado en el repo upstream). El agente carga el `AGENTS.md` del proyecto correspondiente cuando se para adentro.
+Al pararte acá con un agente IA, elegí el modo según el tema. Los proyectos del ecosistema (devops, adhoc-way, tuqui, etc.) se detectan automáticamente en el host pre-rebuild (`initializeCommand` → `discover-mounts.sh`) y aparecen como `custom/<proyecto>/` con su `AGENTS.md` propio. El agente carga el `AGENTS.md` del proyecto correspondiente cuando se para adentro.
 
 INTRO
         if [[ ${#projects[@]} -eq 0 ]]; then
-            echo "_Sin proyectos del ecosistema mounteados todavía. Ver \`docker-compose.override.yml.example\` para activar mounts opt-in (devops, adhoc-way, tuqui)._"
+            echo "_Sin proyectos del ecosistema detectados en el host. \`discover-mounts.sh\` busca por default \`~/repositorios/{devops,adhoc-way}\` y \`~/tuqui\` — cloná alguno y rebuild, o agregá un mount custom en \`docker-compose.override.yml\`._"
         else
             for name in $(echo "${!projects[@]}" | tr ' ' '\n' | sort); do
                 path="${projects[$name]}"
@@ -119,7 +119,7 @@ INTRO
 ## Estructura
 
 - **`repositories/`:** repos del dev con módulos Odoo (editables, branch activa).
-- **Proyectos del ecosistema mounteados:** ver sección "Modos de trabajo" arriba (`custom/<proyecto>/` con `AGENTS.md` propio, declarado en `docker-compose.override.yml`).
+- **Proyectos del ecosistema mounteados:** ver sección "Modos de trabajo" arriba (`custom/<proyecto>/` con `AGENTS.md` propio, auto-detectados por `discover-mounts.sh`).
 - **Otros repos en `custom/`:** clones directos del dev sin `AGENTS.md` (overrides de baked como `odoo`/`enterprise`, repos puntuales). Listado efectivo abajo.
 - **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
   - `src/repositories/`: repos baked no en `repositories/`.
@@ -602,7 +602,6 @@ data = {
     "departamento": "",
     "rol": "",
     "productos": [],
-    "proyectos_devcontainer": [],
     "tuqui_user_id": None,
     "synced_at": "",
 }
@@ -646,26 +645,32 @@ REFRESH_EOF
 chmod +x "$REFRESH_BIN"
 echo "refresh-workspace disponible en $REFRESH_BIN"
 
-# Detección de proyectos del ecosistema mounteados (modelo opt-in via
-# docker-compose.override.yml, decisión §6 #11-#15 del spec OBA bake en
-# ingadhoc/adhoc-way#99). Reemplaza el patrón viejo
+# Detección de proyectos del ecosistema mounteados (decisión §6 #11-#15
+# del spec OBA bake en ingadhoc/adhoc-way#99). Reemplaza el patrón viejo
 # `init_<scope>_ctx + ensure_ctx_clones` que clonaba repos adentro de
 # `custom/<project>-ctx/` durante el poststart.
 #
-# Cada dev declara mounts opt-in en `docker-compose.override.yml` (ver
-# template en `docker-compose.override.yml.example`). Convención de paths
-# host por defecto (decisión §6 #12):
+# Los mounts se generan auto en el HOST pre-rebuild via
+# `discover-mounts.sh` (initializeCommand de devcontainer.json), que
+# detecta presencia de paths del ecosistema y los emite a
+# `docker-compose.auto-mounts.yml`. Convención de paths host por defecto
+# (decisión §6 #12):
 #
 #   ${HOME}/repositorios/devops/    → /home/odoo/custom/devops
 #   ${HOME}/repositorios/adhoc-way/ → /home/odoo/custom/adhoc-way
-#   ${HOME}/tuqui/                  → /home/odoo/custom/tuqui  (opt-in extra)
+#   ${HOME}/tuqui/                  → /home/odoo/custom/tuqui
+#   <self>                          → custom/devops/docker-compose-odoo
+#
+# Para paths no-default o repos fuera del catálogo, el dev declara mounts
+# manuales en `docker-compose.override.yml` (opt-in, gitignored).
 #
 # Sin compat hacia atrás con paths legacy `custom/<project>-ctx/` (decisión
 # §6 #14): JJS y AZ adaptan sus setups locales post-merge.
 #
-# Helper genérico: itera `custom/<project>/` con `AGENTS.md` y registra
-# qué proyectos están activos. El AGENTS.md consolidado del workspace lo
-# regenera `build_workspace` aparte.
+# Este helper corre adentro del container, post-mount: itera
+# `custom/<project>/` con `AGENTS.md` y registra qué proyectos están
+# activos. El AGENTS.md consolidado del workspace lo regenera
+# `build_workspace` aparte.
 #
 # Decisión sobre hooks opt-in:
 #   Se evaluó ejecutar automáticamente `<project>/scripts/devcontainer-
@@ -674,8 +679,8 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 #   `custom/` con un AGENTS.md. Aun cuando los mounts vienen del host
 #   del dev (su threat model propio), preferimos opt-in explícito antes
 #   de habilitar auto-ejecución. Si emerge necesidad concreta, sumar
-#   declaración explícita por proyecto en docker-compose.override.yml o
-#   en una whitelist ~/.adhoc/.
+#   declaración explícita por proyecto en discover-mounts.sh o en una
+#   whitelist ~/.adhoc/.
 for_each_mounted_project() {
     local count=0
     local d name
