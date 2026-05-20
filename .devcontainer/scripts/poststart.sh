@@ -542,7 +542,7 @@ if [ ! -f "$USER_JSON" ]; then
     exit 1
 fi
 if ! command -v adhoc-way >/dev/null 2>&1; then
-    echo "ERROR: binario adhoc-way no instalado — ver imagen dev OCI ≥ 2026-05 (adhoc-cicd/oci-odoo-by-adhoc#33) o instalá con 'npm install -g github:ingadhoc/adhoc-way'." >&2
+    echo "ERROR: binario adhoc-way no encontrado en PATH. El postStart lo instala via 'install_cli_if_missing adhoc-way ... --upgrade'; revisá el log del postStart o instalalo a mano con 'npm install -g git+https://github.com/ingadhoc/adhoc-way.git'." >&2
     exit 1
 fi
 exec adhoc-way init --user-json "$(cat "$USER_JSON")" "$@"
