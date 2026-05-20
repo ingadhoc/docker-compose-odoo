@@ -254,8 +254,23 @@ if command -v n &>/dev/null; then
 fi
 
 install_cli_if_missing() {
-    local cmd="$1" pkg="$2"
-    if ! command -v "$cmd" &>/dev/null; then
+    # Uso: install_cli_if_missing <cmd> <pkg> [--upgrade]
+    #
+    # Por default: solo instala si el binario falta (`command -v` falla). Si
+    # ya está (típicamente porque el bake OCI lo trajo), no toca nada.
+    #
+    # `--upgrade`: corre `npm install -g` siempre, esté o no el binario.
+    # Esto deja que npm decida — para git URLs sin ref consulta el SHA del
+    # default branch y reusa cache si coincide (cache hit ~1-2s), o
+    # re-instala si hay commits nuevos. Útil para paquetes que iteran
+    # rápido y donde el dev no rebuildea la imagen seguido.
+    local cmd="$1" pkg="$2" mode="${3:-skip-if-present}"
+    if [ "$mode" = "--upgrade" ]; then
+        echo "Instalando/actualizando $cmd ($pkg)..."
+        npm install -g "$pkg" --quiet \
+            && echo "$cmd OK ($(command -v "$cmd"), $($cmd --version 2>/dev/null || echo '?'))." \
+            || echo "FALLO: no se pudo instalar/actualizar $pkg"
+    elif ! command -v "$cmd" &>/dev/null; then
         echo "Instalando $cmd ($pkg)..."
         npm install -g "$pkg" --quiet && echo "$cmd instalado." || echo "FALLO: no se pudo instalar $pkg"
     else
@@ -269,6 +284,15 @@ install_cli_if_missing gemini @google/gemini-cli
 # Se mantiene en el devcontainer para que el dev pueda elegir agente.
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
+# adhoc-way — CLI del patrón cross-vendor (ingadhoc/adhoc-way).
+# `--upgrade` porque itera rápido y los devs no rebuildean la imagen OCI
+# todos los días; queremos que cada arranque del devcontainer agarre el
+# último commit del default branch. Usamos `git+https://` (no `github:`
+# shorthand) por la misma razón que el bake OCI (#33): respeta la auth
+# via insteadOf con el GITHUB_BOT_TOKEN / credential helper del host;
+# el shorthand resuelve a codeload.github.com y queda sin auth en repos
+# privados.
+install_cli_if_missing adhoc-way git+https://github.com/ingadhoc/adhoc-way.git --upgrade
 
 # gh CLI — binario directo (no está en npm). Transitorio pre-bake.
 if ! command -v gh &>/dev/null; then
@@ -478,29 +502,28 @@ fi
 
 # Convenciones Adhoc adentro del container — capa Usuario.
 #
-# El script legacy `adhoc-way-install-user.sh` que aplicaba ambas capas
-# (Usuario + Workspace) fue eliminado en Paso 5 del rollout cross-vendor
-# (PR ingadhoc/adhoc-way#115, mergeado). Se reemplaza por el binario
-# `adhoc-way` (npm-installed, decisión §6 #16 del spec OBA bake en
-# ingadhoc/adhoc-way#99). El binario:
+# El binario `adhoc-way` se instala arriba via `install_cli_if_missing
+# adhoc-way ... --upgrade`. Dos fuentes posibles:
 #
-#   - Se instala global en el bake de la imagen OCI dev
-#     (adhoc-cicd/oci-odoo-by-adhoc#33), disponible en /usr/local/bin/
-#     accesible para el usuario odoo via $PATH.
-#   - Materializa la capa Usuario (~/.adhoc/conventions.md, user.json,
-#     state.json + hooks user-level en .claude/.codex/.gemini) con
-#     `adhoc-way init --user-json '{...}'`.
-#   - El init lo dispara un agente IA con `tuqui_context` cargado, NO
-#     este poststart — el bake no tiene datos del dev concreto
-#     (decisión §6 #8 del spec).
+#   - Bake OCI (adhoc-cicd/oci-odoo-by-adhoc#33): el binario viene
+#     pre-instalado en /usr/local/bin/. El install_cli_if_missing de
+#     arriba, con `--upgrade`, lo refresca al HEAD del default branch si
+#     hay commits nuevos (cache hit ~1-2s cuando no hay updates).
+#   - Sin bake (imagen vieja, dev recién agregado a la imagen, etc.):
+#     install_cli_if_missing lo instala en este postStart.
+#
+# En ambos casos, el binario queda disponible para que un agente IA con
+# `tuqui_context` cargado dispare `adhoc-way init --user-json '{...}'`
+# y materialice la capa Usuario (~/.adhoc/conventions.md, user.json,
+# state.json + hooks user-level en .claude/.codex/.gemini/.copilot).
+# El postStart NO ejecuta `init` — el init requiere datos del dev
+# concreto que solo el agente conoce vía tuqui_context (decisión §6 #8
+# del spec OBA bake en ingadhoc/adhoc-way#99).
 if command -v adhoc-way >/dev/null 2>&1; then
     echo "Binario adhoc-way disponible: $(command -v adhoc-way) ($(adhoc-way --version 2>/dev/null || echo 'version desconocida'))"
     echo "  La capa Usuario la dispara un agente IA con tuqui_context cargado via 'adhoc-way init --user-json ...'"
 else
-    echo "AVISO: binario adhoc-way no instalado."
-    echo "  Imagen dev OCI ≥ 2026-05 (adhoc-cicd/oci-odoo-by-adhoc#33 mergeado) trae el binario baked."
-    echo "  Alternativa manual: 'npm install -g github:ingadhoc/adhoc-way' como root."
-    echo "  Una vez disponible: 'adhoc-way init --user-json ...' desde un agente IA con tuqui_context."
+    echo "AVISO: binario adhoc-way no quedó instalado (revisar log de install_cli_if_missing arriba)."
 fi
 
 # Wrapper refresh-workspace — re-aplica la capa Usuario sin rebuild del
