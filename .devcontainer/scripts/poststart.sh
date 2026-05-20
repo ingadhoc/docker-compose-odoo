@@ -308,7 +308,12 @@ install_cli_if_missing opencode opencode-ai
 # en silencio y caiga al fallback (reinstalar) — NO que abra
 # `/dev/tty` para preguntar usuario y cuelgue el postCreate.
 install_adhoc_way() {
-    local pkg="git+https://github.com/ingadhoc/adhoc-way.git"
+    # TEMP: pin al branch del PR #131 (refactor: conventions en paquete +
+    # init lee user.json del disco, v0.3) para testear E2E el bootstrap
+    # auto-init de este mismo PR. REVERTIR antes de mergear a main:
+    # `git revert <sha-de-este-commit>` deja el pkg/ref apuntando a HEAD.
+    local pr131_ref="refs/heads/refactor/conventions-en-paquete-y-init-sin-flag"
+    local pkg="git+https://github.com/ingadhoc/adhoc-way.git#refactor/conventions-en-paquete-y-init-sin-flag"
     local repo_url="git@github.com:ingadhoc/adhoc-way.git"
     local sha_file="$HOME/.cache/adhoc-way/installed.sha"
     local installed_sha="" remote_sha=""
@@ -317,7 +322,7 @@ install_adhoc_way() {
         installed_sha=$(cat "$sha_file" 2>/dev/null || true)
     fi
 
-    remote_sha=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$repo_url" HEAD 2>/dev/null | awk '{print $1; exit}' || true)
+    remote_sha=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$repo_url" "$pr131_ref" 2>/dev/null | awk '{print $1; exit}' || true)
 
     if [ -n "$installed_sha" ] && [ -n "$remote_sha" ] && [ "$installed_sha" = "$remote_sha" ]; then
         echo "adhoc-way al día (sha ${remote_sha:0:7})."
