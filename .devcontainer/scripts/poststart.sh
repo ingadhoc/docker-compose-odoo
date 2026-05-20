@@ -285,14 +285,65 @@ install_cli_if_missing gemini @google/gemini-cli
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
 # adhoc-way — CLI del patrón cross-vendor (ingadhoc/adhoc-way).
-# `--upgrade` porque itera rápido y los devs no rebuildean la imagen OCI
-# todos los días; queremos que cada arranque del devcontainer agarre el
-# último commit del default branch. Usamos `git+https://` (no `github:`
-# shorthand) por la misma razón que el bake OCI (#33): respeta la auth
-# via insteadOf con el GITHUB_BOT_TOKEN / credential helper del host;
-# el shorthand resuelve a codeload.github.com y queda sin auth en repos
-# privados.
-install_cli_if_missing adhoc-way git+https://github.com/ingadhoc/adhoc-way.git --upgrade
+#
+# Reinstalación condicional: comparamos `adhoc-way --version` instalado
+# contra `versions.json#package_version` del default branch en GitHub.
+# Solo corremos `npm install -g` si hay versión nueva o el binario falta.
+# Esto evita el costo del `npm install -g git+https://...` en cada
+# arranque (cache hit de npm ronda 1-2s, miss 5-15s); el fetch de
+# versions.json contra la API es ~700ms.
+#
+# El repo es privado, así que `raw.githubusercontent.com` no sirve sin
+# auth. Vamos a la GitHub Contents API con el token del credential
+# helper de git (el mismo que `npm install` usa para clonar el repo más
+# abajo en el path del install).
+#
+# Usamos `git+https://` (no `github:` shorthand) por la misma razón que
+# el bake OCI (#33): respeta la auth via insteadOf con el
+# GITHUB_BOT_TOKEN / credential helper del host; el shorthand resuelve a
+# codeload.github.com y queda sin auth en repos privados.
+install_adhoc_way() {
+    local pkg="git+https://github.com/ingadhoc/adhoc-way.git"
+    local api_url="https://api.github.com/repos/ingadhoc/adhoc-way/contents/versions.json?ref=main"
+    local installed="" remote="" token=""
+
+    if command -v adhoc-way >/dev/null 2>&1; then
+        installed=$(adhoc-way --version 2>/dev/null || true)
+    fi
+
+    # python3 está garantizado en la imagen Odoo; evita depender de jq
+    # (que se instala más abajo en este mismo script).
+    token=$(printf "protocol=https\nhost=github.com\n\n" \
+        | git credential fill 2>/dev/null \
+        | awk -F= '/^password=/{print $2}' || true)
+    if [ -n "$token" ]; then
+        remote=$(curl -sfL \
+            -H "Authorization: Bearer $token" \
+            -H "Accept: application/vnd.github.raw" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_url" 2>/dev/null \
+            | python3 -c 'import json,sys;print(json.load(sys.stdin).get("package_version",""))' 2>/dev/null \
+            || true)
+    fi
+
+    if [ -n "$installed" ] && [ -n "$remote" ] && [ "$installed" = "$remote" ]; then
+        echo "adhoc-way ya en la última versión ($installed). Salteando reinstall."
+        return 0
+    fi
+
+    if [ -z "$remote" ]; then
+        echo "WARN: no pude consultar versions.json remoto; reinstalo adhoc-way por las dudas."
+    elif [ -z "$installed" ]; then
+        echo "Instalando adhoc-way (no presente; remoto $remote)..."
+    else
+        echo "Actualizando adhoc-way (instalado $installed → remoto $remote)..."
+    fi
+
+    npm install -g "$pkg" --quiet \
+        && echo "adhoc-way OK ($(command -v adhoc-way), $(adhoc-way --version 2>/dev/null || echo '?'))." \
+        || echo "FALLO: no se pudo instalar/actualizar adhoc-way"
+}
+install_adhoc_way
 
 # gh CLI — binario directo (no está en npm). Transitorio pre-bake.
 if ! command -v gh &>/dev/null; then
