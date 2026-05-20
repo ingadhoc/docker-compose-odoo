@@ -295,17 +295,21 @@ install_cli_if_missing opencode opencode-ai
 #
 # `git ls-remote` se eligió sobre la GitHub Contents API porque hereda
 # la auth de git tal cual está configurada en el devcontainer: SSH key
-# via insteadOf (caso típico en los devcontainers Adhoc), credential
-# helper HTTPS, lo que sea. No requiere extraer tokens a mano. Es el
-# mismo path que `npm install` usa más abajo para clonar el repo.
+# forwarded desde el host (caso típico en los devcontainers Adhoc).
+# No requiere extraer tokens a mano.
 #
-# Usamos `git+https://` (no `github:` shorthand) por la misma razón
-# que el bake OCI (#33): respeta la auth via insteadOf con el
-# GITHUB_BOT_TOKEN / credential helper del host; el shorthand resuelve
-# a codeload.github.com y queda sin auth en repos privados.
+# URL SSH para el check liviano (mismo patrón que el clone de skills
+# más abajo). `git+https://` para el `npm install` porque npm necesita
+# el prefijo `git+` y respeta `insteadOf` con GITHUB_BOT_TOKEN cuando
+# está disponible (consistente con bake OCI #33).
+#
+# `GIT_TERMINAL_PROMPT=0` como red de seguridad: si la auth git falla
+# por cualquier motivo, queremos que `git ls-remote` salga con error
+# en silencio y caiga al fallback (reinstalar) — NO que abra
+# `/dev/tty` para preguntar usuario y cuelgue el postCreate.
 install_adhoc_way() {
     local pkg="git+https://github.com/ingadhoc/adhoc-way.git"
-    local repo_url="https://github.com/ingadhoc/adhoc-way.git"
+    local repo_url="git@github.com:ingadhoc/adhoc-way.git"
     local sha_file="$HOME/.cache/adhoc-way/installed.sha"
     local installed_sha="" remote_sha=""
 
@@ -313,7 +317,7 @@ install_adhoc_way() {
         installed_sha=$(cat "$sha_file" 2>/dev/null || true)
     fi
 
-    remote_sha=$(git ls-remote "$repo_url" HEAD 2>/dev/null | awk '{print $1; exit}' || true)
+    remote_sha=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$repo_url" HEAD 2>/dev/null | awk '{print $1; exit}' || true)
 
     if [ -n "$installed_sha" ] && [ -n "$remote_sha" ] && [ "$installed_sha" = "$remote_sha" ]; then
         echo "adhoc-way al día (sha ${remote_sha:0:7})."
