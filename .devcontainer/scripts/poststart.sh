@@ -285,14 +285,64 @@ install_cli_if_missing gemini @google/gemini-cli
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
 # adhoc-way — CLI del patrón cross-vendor (ingadhoc/adhoc-way).
-# `--upgrade` porque itera rápido y los devs no rebuildean la imagen OCI
-# todos los días; queremos que cada arranque del devcontainer agarre el
-# último commit del default branch. Usamos `git+https://` (no `github:`
-# shorthand) por la misma razón que el bake OCI (#33): respeta la auth
-# via insteadOf con el GITHUB_BOT_TOKEN / credential helper del host;
-# el shorthand resuelve a codeload.github.com y queda sin auth en repos
-# privados.
-install_cli_if_missing adhoc-way git+https://github.com/ingadhoc/adhoc-way.git --upgrade
+#
+# Reinstalación condicional: comparamos el SHA del HEAD remoto contra
+# el SHA cacheado tras el último install local. Solo corremos
+# `npm install -g` si difieren o falta cualquiera de los dos. Esto
+# evita el `npm install -g git+https://...` en cada arranque
+# (medido ~6-11s incluso cuando no hay cambios) — el `git ls-remote`
+# que reemplaza el check tarda ~2s.
+#
+# `git ls-remote` se eligió sobre la GitHub Contents API porque hereda
+# la auth de git tal cual está configurada en el devcontainer: SSH key
+# forwarded desde el host (caso típico en los devcontainers Adhoc).
+# No requiere extraer tokens a mano.
+#
+# URL SSH para el check liviano (mismo patrón que el clone de skills
+# más abajo). `git+https://` para el `npm install` porque npm necesita
+# el prefijo `git+` y respeta `insteadOf` con GITHUB_BOT_TOKEN cuando
+# está disponible (consistente con bake OCI #33).
+#
+# `GIT_TERMINAL_PROMPT=0` como red de seguridad: si la auth git falla
+# por cualquier motivo, queremos que `git ls-remote` salga con error
+# en silencio y caiga al fallback (reinstalar) — NO que abra
+# `/dev/tty` para preguntar usuario y cuelgue el postCreate.
+install_adhoc_way() {
+    local pkg="git+https://github.com/ingadhoc/adhoc-way.git"
+    local repo_url="git@github.com:ingadhoc/adhoc-way.git"
+    local sha_file="$HOME/.cache/adhoc-way/installed.sha"
+    local installed_sha="" remote_sha=""
+
+    if command -v adhoc-way >/dev/null 2>&1; then
+        installed_sha=$(cat "$sha_file" 2>/dev/null || true)
+    fi
+
+    remote_sha=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$repo_url" HEAD 2>/dev/null | awk '{print $1; exit}' || true)
+
+    if [ -n "$installed_sha" ] && [ -n "$remote_sha" ] && [ "$installed_sha" = "$remote_sha" ]; then
+        echo "adhoc-way al día (sha ${remote_sha:0:7})."
+        return 0
+    fi
+
+    if [ -z "$remote_sha" ]; then
+        echo "WARN: no pude consultar SHA remoto de adhoc-way; reinstalo por las dudas."
+    elif [ -z "$installed_sha" ]; then
+        echo "Instalando adhoc-way (sin cache local; remoto ${remote_sha:0:7})..."
+    else
+        echo "Actualizando adhoc-way (${installed_sha:0:7} → ${remote_sha:0:7})..."
+    fi
+
+    if npm install -g "$pkg" --quiet; then
+        echo "adhoc-way OK ($(command -v adhoc-way), $(adhoc-way --version 2>/dev/null || echo '?'))."
+        if [ -n "$remote_sha" ]; then
+            mkdir -p "$(dirname "$sha_file")"
+            echo "$remote_sha" > "$sha_file"
+        fi
+    else
+        echo "FALLO: no se pudo instalar/actualizar adhoc-way"
+    fi
+}
+install_adhoc_way
 
 # gh CLI — binario directo (no está en npm). Transitorio pre-bake.
 if ! command -v gh &>/dev/null; then
