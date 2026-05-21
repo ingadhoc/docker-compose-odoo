@@ -31,8 +31,6 @@ services:
       - ./.devcontainer/auth/.claude.json:/home/odoo/.claude.json
       - ./.devcontainer/auth/.agents:/home/odoo/.agents
       - ./.devcontainer/auth/.config/gh:/home/odoo/.config/gh
-      # Path canónico host↔container para sharing de archivos (spec 0012 eje 2)
-      - ${HOME}/odoo-shared:/home/odoo/shared
       # Capa Usuario adhoc-way — user.md + teams + conventions.md compartidos
       # host↔container. Permite que adhoc-way-install-user.sh y poststart.sh
       # lean/escriban la misma identidad sin sincronización manual.
