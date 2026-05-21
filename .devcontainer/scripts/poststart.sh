@@ -694,17 +694,17 @@ if [ ! -f "$CLAUDE_SETTINGS" ]; then
       "Bash(git cat-file:*)",
       "Bash(git for-each-ref:*)",
       "Bash(git -C *)",
-      "mcp__Tuqui__odoo_search_read",
-      "mcp__Tuqui__odoo_read_group",
-      "mcp__Tuqui__odoo_models_list",
-      "mcp__Tuqui__odoo_search_count",
-      "mcp__Tuqui__odoo_fields_get",
-      "mcp__Tuqui__odoo_fields_batch",
-      "mcp__Tuqui__odoo_schema_discover",
-      "mcp__Tuqui__odoo_skills_directory",
-      "mcp__Tuqui__odoo_skill_detail",
-      "mcp__Tuqui__tuqui_context",
-      "mcp__Tuqui__tuqui_guide"
+      "mcp__tuqui-adhoc__odoo_search_read",
+      "mcp__tuqui-adhoc__odoo_read_group",
+      "mcp__tuqui-adhoc__odoo_models_list",
+      "mcp__tuqui-adhoc__odoo_search_count",
+      "mcp__tuqui-adhoc__odoo_fields_get",
+      "mcp__tuqui-adhoc__odoo_fields_batch",
+      "mcp__tuqui-adhoc__odoo_schema_discover",
+      "mcp__tuqui-adhoc__odoo_skills_directory",
+      "mcp__tuqui-adhoc__odoo_skill_detail",
+      "mcp__tuqui-adhoc__tuqui_context",
+      "mcp__tuqui-adhoc__tuqui_guide"
     ]
   }
 }
