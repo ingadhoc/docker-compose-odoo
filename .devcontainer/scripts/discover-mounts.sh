@@ -32,6 +32,12 @@ PROJECTS=(
     "devops|${HOME}/repositorios/devops|/home/odoo/custom/devops|"
     "adhoc-way|${HOME}/repositorios/adhoc-way|/home/odoo/custom/adhoc-way|"
     "tuqui|${HOME}/tuqui|/home/odoo/custom/tuqui|"
+    # oba-specs queda top-level sin prefijo (aunque es repo de la org
+    # ingadhoc/), siguiendo la regla aflojada propuesta en la spec draft
+    # `contextos-opcionales-en-custom` (ingadhoc/adhoc-way) — todo dev OBA
+    # lo necesita, no es opt-in. Followup: formalizar el supersede del
+    # ADR 0015 para registrar la excepción.
+    "oba-specs|${HOME}/repositorios/oba-specs|/home/odoo/custom/oba-specs|"
     # Self-mount del propio docker-compose-odoo deshabilitado (mayo 2026):
     # cuando devops ya está mounteado, el bind anidado en
     # custom/devops/docker-compose-odoo aparece como dir dummy en lugar del

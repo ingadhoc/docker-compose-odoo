@@ -612,6 +612,7 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 #   ${HOME}/repositorios/devops/    → /home/odoo/custom/devops
 #   ${HOME}/repositorios/adhoc-way/ → /home/odoo/custom/adhoc-way
 #   ${HOME}/tuqui/                  → /home/odoo/custom/tuqui
+#   ${HOME}/repositorios/oba-specs/ → /home/odoo/custom/oba-specs
 #   <self>                          → custom/devops/docker-compose-odoo
 #
 # Para paths no-default o repos fuera del catálogo, el dev declara mounts
