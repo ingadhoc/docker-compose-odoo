@@ -552,25 +552,19 @@ fi
 
 # Bootstrap mínimo de la capa Usuario adhoc-way.
 #
-# Post-PR ingadhoc/adhoc-way#131 (consumer-only flow, v0.3.0), el menú
-# onboarding del agente IA vive en `templates/conventions.md` del paquete
-# instalado y se activa solo si `~/.claude/CLAUDE.md` (y equivalentes
-# para Codex/Gemini/Copilot) tienen el bloque managed que apunta a ese
-# path. El bloque lo escribe `adhoc-way init`, que requiere
-# `~/.adhoc/user.json` con `nombre` y `email` no vacíos.
+# Post-PR ingadhoc/adhoc-way#134 (init progresivo, v0.4.0), `adhoc-way init`
+# corre en dos stages:
+#   - Stage 0 (siempre, no requiere user.json) escribe directiva user-level
+#     + SessionStart hook en cada vendor detectado, sincroniza state.json.
+#   - Stage 1 (read-only sobre user.json) reporta estado de identidad.
+#     Si user.json no existe o está malformado, no falla — solo loguea
+#     "identidad pendiente"; el primer "hola" al agente IA gatilla el menú
+#     onboarding y la completa via tuqui-adhoc.
 #
-# Sin este bootstrap, el dev abre `claude` en un devcontainer fresh y
-# recibe saludo genérico — el menú onboarding no se gatilla porque no
-# hay bloque managed → onboarding asistido se rompe en el primer paso.
-#
-# Cambio respecto a la decisión §6 #8 del spec OBA bake (que decía "el
-# postStart NO ejecuta init"): esa decisión se basaba en que init
-# necesitaba datos que solo `tuqui_context` conocía. En v0.3 init es
-# laxo — solo requiere nombre/email no vacíos, que `git config --global`
-# provee canónicamente per convenciones Adhoc ("Identidad del dev"). El
-# resto de campos (rol/equipo/foco/productos) los popula el propio menú
-# onboarding via tuqui-adhoc en la opción 2 ("Completar tu identidad"),
-# que ahora sí se puede gatillar porque el bloque managed ya está.
+# Por eso el bootstrap acá se reduce a invocar el binario. Versiones previas
+# creaban un user.json parcial desde git config — ya no hace falta y de
+# hecho era contraproducente (el agente podía interpretarlo como "identidad
+# completa" y saltearse el onboarding).
 bootstrap_adhoc_way_user() {
     if ! command -v adhoc-way >/dev/null 2>&1; then
         echo "AVISO: binario adhoc-way no instalado — skip bootstrap capa Usuario."
@@ -578,42 +572,6 @@ bootstrap_adhoc_way_user() {
     fi
     echo "Binario adhoc-way disponible: $(command -v adhoc-way) ($(adhoc-way --version 2>/dev/null || echo 'version desconocida'))"
 
-    local user_json="$HOME/.adhoc/user.json"
-    if [ ! -f "$user_json" ]; then
-        local nombre email
-        nombre=$(git config --global user.name 2>/dev/null || true)
-        email=$(git config --global user.email 2>/dev/null || true)
-        if [ -z "$nombre" ] || [ -z "$email" ]; then
-            echo "AVISO: git config user.name/user.email no seteado — skip bootstrap user.json."
-            echo "  Configurá git y corré 'adhoc-way init' a mano (o rebuild) para activar la capa Usuario."
-            return 0
-        fi
-        echo "Bootstrap: creando $user_json desde git config (nombre=$nombre, email=$email)..."
-        mkdir -p "$HOME/.adhoc"
-        # Usamos python3 (siempre presente en la imagen Odoo) para evitar
-        # romper el JSON si nombre/email tienen caracteres especiales.
-        python3 - "$user_json" "$nombre" "$email" <<'PY'
-import json, sys
-path, nombre, email = sys.argv[1], sys.argv[2], sys.argv[3]
-data = {
-    "nombre": nombre,
-    "email": email,
-    "alias": "",
-    "departamento": "",
-    "rol": "",
-    "productos": [],
-    "tuqui_user_id": None,
-    "synced_at": "",
-}
-with open(path, "w") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-PY
-    fi
-
-    # Idempotente — reescribe bloque managed con la versión del paquete
-    # actualmente instalado. Si user.json ya tiene datos completos
-    # (puesto por un init previo asistido por tuqui-adhoc), se respeta.
     echo "Bootstrap: corriendo 'adhoc-way init'..."
     if ! adhoc-way init; then
         echo "WARN: adhoc-way init falló — la capa Usuario puede quedar incompleta."
@@ -624,18 +582,13 @@ bootstrap_adhoc_way_user
 # Wrapper refresh-workspace — re-aplica la capa Usuario sin rebuild del
 # devcontainer. Útil cuando se actualizó la versión de conventions del
 # paquete adhoc-way y el dev quiere bajar el bloque managed sin esperar
-# la próxima sesión. En v0.3 `init` lee `~/.adhoc/user.json` del disco
-# (el flag `--user-json` fue eliminado), así que el wrapper es trivial.
+# la próxima sesión. En v0.4 `init` es progresivo (Stage 0 no requiere
+# user.json), así que el wrapper es trivial.
 REFRESH_BIN="$HOME/.local/bin/refresh-workspace"
 mkdir -p "$(dirname "$REFRESH_BIN")"
 cat > "$REFRESH_BIN" <<'REFRESH_EOF'
 #!/bin/bash
 set -e
-USER_JSON="$HOME/.adhoc/user.json"
-if [ ! -f "$USER_JSON" ]; then
-    echo "ERROR: $USER_JSON no existe — debería haberlo creado el bootstrap del postStart desde git config. Revisá el log del postStart o configurá 'git config --global user.name/user.email' y corré 'refresh-workspace' de nuevo." >&2
-    exit 1
-fi
 if ! command -v adhoc-way >/dev/null 2>&1; then
     echo "ERROR: binario adhoc-way no encontrado en PATH. El postStart lo instala via install_adhoc_way; revisá el log del postStart o instalalo a mano con 'npm install -g git+https://github.com/ingadhoc/adhoc-way.git'." >&2
     exit 1
