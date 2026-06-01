@@ -28,6 +28,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="${REPO_ROOT}/docker-compose.auto-mounts.yml"
 
+# GCP legacy credentials: resolver cuenta activa antes de armar el catálogo.
+_gcp_src=""
+if command -v gcloud &>/dev/null; then
+    _gcp_account="$(gcloud config get-value account 2>/dev/null || true)"
+    if [[ -n "$_gcp_account" ]]; then
+        _gcp_src="${HOME}/.config/gcloud/legacy_credentials/${_gcp_account}"
+    fi
+fi
+
 PROJECTS=(
     "devops|${HOME}/repositorios/devops|/home/odoo/custom/devops|"
     "adhoc-way|${HOME}/repositorios/adhoc-way|/home/odoo/custom/adhoc-way|"
@@ -48,6 +57,7 @@ PROJECTS=(
     "odumbo|${HOME}/repositorios/odumbo|/home/odoo/custom/odumbo|"
     "consultoria-tecnica|${HOME}/repositorios/consultoria-tecnica|/home/odoo/custom/consultoria-tecnica|"
 )
+[[ -n "$_gcp_src" ]] && PROJECTS+=("gcp-credentials|${_gcp_src}|/home/odoo/gcloud_legacy_credentials:ro|")
 
 declare -A PRESENT=()
 declare -A SOURCES=()
