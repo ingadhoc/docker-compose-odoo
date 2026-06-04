@@ -472,6 +472,8 @@ INGADHOC_SKILLS=(
     "odoo-video-to-docs"        # docs desde video — alto uso real (Academy)
     # SDD / specs
     "product-sdd"
+    # General
+    "gcp-logs"
 )
 
 # find-skills (descubrimiento) y skill-creator (autoría) ya NO se auto-instalan
