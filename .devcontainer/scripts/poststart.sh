@@ -474,12 +474,11 @@ INGADHOC_SKILLS=(
     "product-sdd"
 )
 
-# Skills externas (formato "repo|skill"; el separador `|` evita colisionar
-# con `:` presente en URLs SSH como git@github.com:org/repo.git)
-EXTERNAL_SKILLS=(
-    "anthropics/skills|skill-creator"
-    "vercel-labs/skills|find-skills"      # descubrimiento de skills, recomendado por ingadhoc/skills
-)
+# find-skills (descubrimiento) y skill-creator (autoría) ya NO se auto-instalan
+# acá: son tier "recommended" (pull, no push) de adhoc-way (ADR 0032). No son
+# esenciales; `adhoc-way init` (que corre más abajo en este poststart) las
+# surfacea con su comando de install y el dev las instala si quiere. Antes se
+# instalaban por `npx skills`, el camino que el tier recommended reemplaza.
 
 if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
     echo "No hay 'skills' disponibles para Odoo $ODOO_V. Saltando instalación."
@@ -524,21 +523,9 @@ else
         fi
     done
 
-    # External skills (formato "repo|skill") — todos los agentes
-    for entry in "${EXTERNAL_SKILLS[@]}"; do
-        ext_repo="${entry%%|*}"
-        ext_skill="${entry##*|}"
-        for agent in claude-code codex gemini-cli github-copilot; do
-            if ! CI=true npx --yes skills add "$ext_repo" \
-                --skill "$ext_skill" \
-                --agent "$agent" \
-                --no-interactive \
-                --yes >> "$LOG_FILE" 2>&1; then
-                install_failed=1
-                echo "FALLO: error instalando skill '$ext_skill' desde $ext_repo para $agent"
-            fi
-        done
-    done
+    # (find-skills / skill-creator ya no se instalan acá — son tier recommended
+    # de adhoc-way; las surfacea `adhoc-way init`. Ver nota más arriba, donde
+    # estaba la lista de skills externas.)
 
     if [ "$install_failed" -eq 0 ] && [ -d "$PWD/$SKILL_PATH" ]; then
         echo "Skills installed."
