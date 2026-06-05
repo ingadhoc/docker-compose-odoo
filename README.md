@@ -41,27 +41,6 @@ Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo
 
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 
-## Odoo source code
-
-Inside the devcontainer you have available a "src" folder that is a link to src folder inside the container.
-
-if you want to use this folder outside the container you need:
-
-- uncomment the volume (file: docker-compose.yaml)
-
-```yaml
-services:
-  odoo:
-    volumes:
-      # - default:/home/odoo/src
-```
-
-- fix permissions
-
-```sh
-~/odoo/18/ $: ./scripts/link_volumes.sh
-```
-
 ## Repos en custom/repositories/
 
 Para trabajar con el código local de un repositorio en lugar del bakeado en la imagen, clonalo en `~/custom/repositories/`.
