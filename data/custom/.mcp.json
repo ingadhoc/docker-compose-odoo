@@ -1,8 +1,3 @@
 {
-  "mcpServers": {
-    "tuqui-adhoc": {
-      "type": "http",
-      "url": "https://tuqui.com/mcp/adhoc"
-    }
-  }
+  "mcpServers": {}
 }
