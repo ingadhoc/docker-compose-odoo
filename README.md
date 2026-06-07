@@ -25,15 +25,16 @@ devcontainer open ~/odoo/18
 
 ## Mounts auto-detectados de proyectos del ecosistema adhoc-way
 
-Los proyectos del ecosistema (`devops`, `adhoc-way`, `tuqui`, `oba-specs`, y el propio `docker-compose-odoo`) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
+Los proyectos del ecosistema (`devops`, `adhoc-way`, `tuqui`, `oba-project`, etc.) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
 
-Convención de paths host por defecto (catálogo embebido en `discover-mounts.sh`):
+**El catálogo lo declara `oba-project`**, no este repo: vive en `oba-project/.adhoc/topology.yml` (trabajo C — spec adhoc-way `estandarizacion-oba.md` §4). `discover-mounts.sh` lo lee desde el host (seed: `${HOME}/repositorios/oba-project`, overridable por env `OBA_PROJECT_HOST`); si no lo encuentra, no monta nada del ecosistema y avisa. Paths por defecto que declara el manifest hoy:
 
-- `${HOME}/repositorios/devops/`    → `/home/odoo/custom/devops`
-- `${HOME}/repositorios/adhoc-way/` → `/home/odoo/custom/adhoc-way`
-- `${HOME}/tuqui/`                  → `/home/odoo/custom/tuqui`
-- `${HOME}/repositorios/oba-specs/` → `/home/odoo/custom/oba-specs`
-- `<self>` (este repo)              → `/home/odoo/custom/devops/docker-compose-odoo` (requiere `devops` presente)
+- `${HOME}/repositorios/devops/`              → `/home/odoo/custom/devops`
+- `${HOME}/repositorios/adhoc-way/`           → `/home/odoo/custom/adhoc-way`
+- `${HOME}/tuqui/`                            → `/home/odoo/custom/tuqui`
+- `${HOME}/repositorios/oba-project/`         → `/home/odoo/custom/oba-project`
+- `${HOME}/repositorios/odumbo/`              → `/home/odoo/custom/odumbo`
+- `${HOME}/repositorios/consultoria-tecnica/` → `/home/odoo/custom/consultoria-tecnica`
 
 Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo fuera del catálogo, usá `docker-compose.override.yml` (opt-in manual, gitignored).
 
