@@ -89,9 +89,11 @@ if [[ -r "$TOPOLOGY_FILE" ]]; then
     parse_topology "$TOPOLOGY_FILE"
     echo "discover-mounts: catálogo leído de $TOPOLOGY_FILE (${#PROJECTS[@]} entradas)" >&2
 else
-    echo "discover-mounts: AVISO — no encontré $TOPOLOGY_FILE; sin catálogo del ecosistema." >&2
-    echo "discover-mounts:   cloná oba-project en \$HOME/repositorios/oba-project (o seteá OBA_PROJECT_HOST)," >&2
-    echo "discover-mounts:   o declará mounts manuales en docker-compose.override.yml (opt-in)." >&2
+    echo "discover-mounts: AVISO — no encontré $TOPOLOGY_FILE." >&2
+    echo "discover-mounts:   oba-project es REQUERIDO para el workspace OBA (es el hub de specs/topología)." >&2
+    echo "discover-mounts:   cloná oba-project en \$HOME/repositorios/oba-project (o seteá OBA_PROJECT_HOST)." >&2
+    echo "discover-mounts:   El devcontainer igual levanta, pero sin mounts del ecosistema; para mounts" >&2
+    echo "discover-mounts:   custom usá docker-compose.override.yml (opt-in)." >&2
 fi
 
 # GCP legacy credentials: mount runtime-específico (path computado del host),
