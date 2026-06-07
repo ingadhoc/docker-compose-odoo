@@ -60,6 +60,12 @@ _emit_project() {
     [[ -z "$id" ]] && return 0
     host="${host//\$\{HOME\}/$HOME}";     host="${host//\$\{REPO_ROOT\}/$REPO_ROOT}"
     target="${target//\$\{HOME\}/$HOME}"; target="${target//\$\{REPO_ROOT\}/$REPO_ROOT}"
+    # Entrada incompleta (falta host_path o container_target) → la salteo en vez
+    # de emitir un bind inválido (`- /host:` o `- :/target`) que rompería compose.
+    if [[ -z "$host" || -z "$target" ]]; then
+        echo "discover-mounts: AVISO — entrada '$id' incompleta en el manifest (host_path/container_target vacío); la salteo." >&2
+        return 0
+    fi
     PROJECTS+=("${id}|${host}|${target}|${req}")
 }
 
@@ -127,6 +133,10 @@ for entry in "${PROJECTS[@]}"; do
     fi
 done
 
+# Chequeo de `requires`: pase ÚNICO, no transitivo. Mira presencia-en-host del
+# parent (PRESENT[$req] del primer loop), no si el parent sobrevivió a su propio
+# requires. Alcanza para cadenas de 1 nivel (el caso de hoy: todos `requires: ""`).
+# Si algún día se arma una cadena `A→B→C`, esto necesita iterar hasta punto fijo.
 for entry in "${PROJECTS[@]}"; do
     IFS='|' read -r id host target req <<<"$entry"
     if [[ -n "$req" && -n "${PRESENT[$id]:-}" && -z "${PRESENT[$req]:-}" ]]; then
