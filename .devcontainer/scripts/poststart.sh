@@ -150,7 +150,7 @@ MIDDLE
 
 ## Cómo navegar
 
-- **Wiki del módulo:** `oba-wiki/wiki/19/<categoría>/<producto>/<módulo>.md` (en `custom/` o `src/`)
+- **Wiki del módulo:** `oba-project-memory/wiki/19/<categoría>/<producto>/<módulo>.md` (en `custom/` o `src/`)
 - **Convenciones Adhoc:** en `~/.claude/CLAUDE.md` (cargado globalmente).
 - **Traer repo baked al workspace:** `workspace-add <nombre>`
 - **Sacarlo:** `workspace-rm <nombre>`
@@ -595,14 +595,10 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 # Los mounts se generan auto en el HOST pre-rebuild via
 # `discover-mounts.sh` (initializeCommand de devcontainer.json), que
 # detecta presencia de paths del ecosistema y los emite a
-# `docker-compose.auto-mounts.yml`. Convención de paths host por defecto
-# (decisión §6 #12):
-#
-#   ${HOME}/repositorios/devops/    → /home/odoo/custom/devops
-#   ${HOME}/repositorios/adhoc-way/ → /home/odoo/custom/adhoc-way
-#   ${HOME}/tuqui/                  → /home/odoo/custom/tuqui
-#   ${HOME}/repositorios/oba-specs/ → /home/odoo/custom/oba-specs
-#   <self>                          → custom/devops/docker-compose-odoo
+# `docker-compose.auto-mounts.yml`. El catálogo de paths ya NO está
+# hardcodeado: lo declara `oba-project/.adhoc/topology.yml` (trabajo C —
+# spec adhoc-way `estandarizacion-oba.md` §4); discover-mounts.sh lo lee
+# desde el host (seed `${HOME}/repositorios/oba-project`).
 #
 # Para paths no-default o repos fuera del catálogo, el dev declara mounts
 # manuales en `docker-compose.override.yml` (opt-in, gitignored).
