@@ -42,23 +42,8 @@ Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo
 
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 
-## Odoo source code
+## Repos en custom/repositories/
 
-Inside the devcontainer you have available a "src" folder that is a link to src folder inside the container.
+Para trabajar con el código local de un repositorio en lugar del bakeado en la imagen, clonalo en `~/custom/repositories/`.
 
-if you want to use this folder outside the container you need:
-
-- uncomment the volume (file: docker-compose.yaml)
-
-```yaml
-services:
-  odoo:
-    volumes:
-      # - default:/home/odoo/src
-```
-
-- fix permissions
-
-```sh
-~/odoo/18/ $: ./scripts/link_volumes.sh
-```
+Si el repo tiene **comandos CLI de Odoo** (como `odoo fixdb`), usá el **mismo nombre que tiene en la imagen** (por ejemplo `ingadhoc-odoo-saas`, no `odoo-saas`). El script `400-auto-detect-addons` deduplica repos por nombre de directorio; si los nombres difieren, ambos quedan en el `addons_path` y el baked pisa al local para los comandos CLI. Para repos sin comandos CLI (solo modelos, vistas, etc.) no hay restricción de nombrado.
