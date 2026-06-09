@@ -151,28 +151,44 @@ for entry in "${PROJECTS[@]}"; do
     [[ -n "${PRESENT[$id]:-}" ]] && detected+=("$id")
 done
 
+# Mounts devops — solo si R2_ENABLE_DEVOPS=1 en el host.
+# Agrega ~/.kube, ~/.config/gcloud y el socket de Docker al servicio odoo.
+devops_mounts=()
+if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
+    [[ -d "${HOME}/.kube" ]]           && devops_mounts+=("${HOME}/.kube:/home/odoo/.kube:ro")
+    [[ -d "${HOME}/.config/gcloud" ]]  && devops_mounts+=("${HOME}/.config/gcloud:/home/odoo/.config/gcloud:ro")
+    [[ -d "${HOME}/.docker" ]]         && devops_mounts+=("${HOME}/.docker:/home/odoo/.docker:ro")
+    [[ -S /var/run/docker.sock ]]      && devops_mounts+=("/var/run/docker.sock:/var/run/docker.sock")
+    echo "discover-mounts: R2_ENABLE_DEVOPS=1 — ${#devops_mounts[@]} mount(s) devops." >&2
+fi
+
 {
     echo "# docker-compose.auto-mounts.yml — AUTO-GENERATED por"
     echo "# .devcontainer/scripts/discover-mounts.sh (initializeCommand)."
     echo "# NO EDITAR A MANO: cambios se pierden en el próximo rebuild."
     echo "# Para mounts custom (path no-default) usá docker-compose.override.yml."
     echo "#"
-    if (( ${#detected[@]} == 0 )); then
+    if (( ${#detected[@]} == 0 && ${#devops_mounts[@]} == 0 )); then
         echo "# Proyectos detectados: ninguno."
         echo ""
         echo "services:"
         echo "  odoo: {}"
     else
-        echo "# Proyectos detectados:"
-        for id in "${detected[@]}"; do
-            echo "#   $id  (${SOURCES[$id]} → ${TARGETS[$id]})"
-        done
+        if (( ${#detected[@]} > 0 )); then
+            echo "# Proyectos detectados:"
+            for id in "${detected[@]}"; do
+                echo "#   $id  (${SOURCES[$id]} → ${TARGETS[$id]})"
+            done
+        fi
         echo ""
         echo "services:"
         echo "  odoo:"
         echo "    volumes:"
         for id in "${detected[@]}"; do
             echo "      - ${SOURCES[$id]}:${TARGETS[$id]}"
+        done
+        for mount in "${devops_mounts[@]}"; do
+            echo "      - $mount"
         done
     fi
 } > "$OUT"

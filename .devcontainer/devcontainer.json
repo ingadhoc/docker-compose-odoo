@@ -31,7 +31,10 @@
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user",
-    "AD_DEV_MODE": "NORMAL"
+    "AD_DEV_MODE": "NORMAL",
+    // export R2_ENABLE_DEVOPS=1 en el host activa mounts y herramientas devops.
+    "R2_ENABLE_DEVOPS": "${localEnv:R2_ENABLE_DEVOPS}",
+    "KUBECONFIG": "/home/odoo/.kube/config"
   },
 
   // Configure tool-specific properties.

@@ -703,7 +703,52 @@ else
     echo "Claude Code settings.json ya existe — respeto config propia ($CLAUDE_SETTINGS)"
 fi
 
-if [[ "${AD_DEV_USER_TYPE:-}" == "DEVOPS" ]]; then
+if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
+    # kubectl
+    if ! command -v kubectl &>/dev/null; then
+        echo "Instalando kubectl..."
+        KUBECTL_VERSION=$(curl -Ls https://dl.k8s.io/release/stable.txt)
+        curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" -o /tmp/kubectl \
+            && chmod +x /tmp/kubectl && sudo mv /tmp/kubectl /usr/local/bin/kubectl \
+            && echo "kubectl ${KUBECTL_VERSION} instalado." \
+            || echo "FALLO: no se pudo instalar kubectl"
+    else
+        echo "kubectl ya presente ($(kubectl version --client -o json 2>/dev/null | grep gitVersion | head -1 || echo '?'))."
+    fi
+
+    # helm
+    if ! command -v helm &>/dev/null; then
+        echo "Instalando helm..."
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
+            && echo "helm $(helm version --short 2>/dev/null) instalado." \
+            || echo "FALLO: no se pudo instalar helm"
+    else
+        echo "helm ya presente ($(helm version --short 2>/dev/null))."
+    fi
+
+    # Docker CLI — DooD: el socket del host está montado en /var/run/docker.sock.
+    # usermod no toma efecto en la sesión actual; chmod 666 cubre el acceso inmediato.
+    if ! command -v docker &>/dev/null; then
+        echo "Instalando Docker CLI..."
+        sudo apt-get -qq update \
+            && sudo apt-get -qq install -y --no-install-recommends docker.io \
+            && echo "Docker CLI instalado." \
+            || echo "FALLO: no se pudo instalar Docker CLI"
+    else
+        echo "docker ya presente ($(docker --version 2>/dev/null))."
+    fi
+    if [ -S /var/run/docker.sock ]; then
+        DOCKER_SOCK_GID=$(stat -c '%g' /var/run/docker.sock)
+        if ! getent group docker &>/dev/null; then
+            sudo groupadd -g "$DOCKER_SOCK_GID" docker
+        elif [[ "$(getent group docker | cut -d: -f3)" != "$DOCKER_SOCK_GID" ]]; then
+            sudo groupmod -g "$DOCKER_SOCK_GID" docker 2>/dev/null || true
+        fi
+        sudo usermod -aG docker odoo
+        sudo chmod 666 /var/run/docker.sock
+    fi
+
+    # gcloud
     if ! command -v gcloud &>/dev/null; then
         echo "Instalando gcloud CLI..."
         sudo apt-get -qq update \
