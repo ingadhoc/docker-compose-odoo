@@ -182,3 +182,21 @@ if (( ${#detected[@]} == 0 )); then
 else
     echo "discover-mounts: ${#detected[@]} proyecto(s) detectado(s) → ${detected[*]}"
 fi
+
+# gh keyring → archivo
+# El keyring del SO (GNOME Keyring / KWallet) no es accesible dentro del
+# container. Si el token está ahí, gh auth falla adentro aunque el host
+# funcione. Migramos automáticamente a --insecure-storage (plaintext en
+# hosts.yml) para que el bind mount lo exponga al container.
+if command -v gh &>/dev/null && gh auth status 2>&1 | grep -q "(keyring)"; then
+    echo "discover-mounts: gh token en keyring del SO — migrando a archivo..."
+    TOKEN=$(gh auth token 2>/dev/null || true)
+    if [ -n "$TOKEN" ]; then
+        GH_HOST=$(gh auth status 2>&1 | awk '/Logged in to/{print $5; exit}')
+        gh auth logout -h "${GH_HOST:-github.com}" 2>/dev/null || true
+        echo "$TOKEN" | gh auth login -h "${GH_HOST:-github.com}" --with-token --insecure-storage
+        echo "discover-mounts: gh migrado OK (token en ~/.config/gh/hosts.yml)."
+    else
+        echo "discover-mounts: WARN — no se pudo leer el token del keyring." >&2
+    fi
+fi

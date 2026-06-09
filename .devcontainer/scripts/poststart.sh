@@ -360,6 +360,10 @@ else
     echo "gh ya presente ($(command -v gh))."
 fi
 
+if command -v gh &>/dev/null; then
+    gh auth status &>/dev/null 2>&1 && echo "gh: autenticado OK." || echo "gh: no autenticado."
+fi
+
 # Extras CLI (jq, ripgrep, bat) — calidad de vida para workflow con agentes.
 # Solo en imagen dev. Transitorio pre-bake OCI: cuando dev.packages los traiga,
 # sacar este bloque.
@@ -697,6 +701,24 @@ JSON
     echo "Allow-list base de Claude Code instalada en $CLAUDE_SETTINGS"
 else
     echo "Claude Code settings.json ya existe — respeto config propia ($CLAUDE_SETTINGS)"
+fi
+
+if [[ "${AD_DEV_USER_TYPE:-}" == "DEVOPS" ]]; then
+    if ! command -v gcloud &>/dev/null; then
+        echo "Instalando gcloud CLI..."
+        sudo apt-get -qq update \
+            && sudo apt-get -qq install -y --no-install-recommends apt-transport-https ca-certificates gnupg \
+            && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+                | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg \
+            && echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+                | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list \
+            && sudo apt-get -qq update \
+            && sudo apt-get -qq install -y --no-install-recommends google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin \
+            && echo "gcloud $(gcloud version --format='value(Google Cloud SDK)') instalado." \
+            || echo "FALLO: no se pudo instalar gcloud"
+    else
+        echo "gcloud ya presente ($(gcloud version --format='value(Google Cloud SDK)' 2>/dev/null))."
+    fi
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then

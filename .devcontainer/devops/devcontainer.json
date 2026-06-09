@@ -29,11 +29,18 @@
       "target": "/home/odoo/.kube",
       "type": "bind",
       "readonly": true
+    },
+    // ~/.config/gcloud del host montado readonly; expone auth ADC y config activa
+    // sin necesidad de re-autenticar dentro del container.
+    {
+      "source": "${localEnv:HOME}/.config/gcloud",
+      "target": "/home/odoo/.config/gcloud",
+      "type": "bind",
+      "readonly": true
     }
   ],
 
-  // kubectl + helm instalados como feature (cacheada en la imagen, no en postCreate).
-  // minikube: "none" porque usamos el cluster real vía kubeconfig del host.
+  // Herramientas instaladas como features (cacheadas en la imagen, no en postCreate).
   "features": {
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "version": "latest",
@@ -48,7 +55,8 @@
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user",
-    "AD_DEV_MODE": "DEVOPS",
+    "AD_DEV_MODE": "NORMAL",
+    "AD_DEV_USER_TYPE": "DEVOPS",
     // KUBECONFIG explícito por si el archivo no está en el path default dentro del container.
     "KUBECONFIG": "/home/odoo/.kube/config"
   },
