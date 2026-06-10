@@ -65,8 +65,10 @@ build_workspace() {
         elif [[ -z "$(ls -A "$d" 2>/dev/null)" ]]; then
             # Dir vacío directo bajo custom/ = casi seguro un mountpoint viejo que
             # quedó tras sacar o renombrar un bind (p.ej. custom/oba-project tras
-            # el rename del proyecto a oba). No es un repo; no lo listamos como
-            # "otro repo" y avisamos al final (el borrado real necesita sudo).
+            # el rename del proyecto a oba). No es un repo: lo dejamos fuera del
+            # listado de "otros repos". El AVISO accionable (con `sudo rmdir`) lo
+            # da discover-mounts.sh en el HOST (initializeCommand, siempre visible
+            # en el log del rebuild — el postStart lo colapsa VS Code).
             stale_mounts[$name]=1
         else
             custom_others[$name]=1
@@ -174,19 +176,6 @@ Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para es
 EOF
 
     echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
-
-    # Aviso de mountpoints viejos: dirs vacíos bajo custom/ que ya no están en el
-    # catálogo (típico tras un rename de proyecto, p.ej. oba-project → oba). El
-    # borrado necesita sudo (los crea Docker, root-owned) → no lo hacemos acá;
-    # solo avisamos para que el dev lo limpie.
-    if (( ${#stale_mounts[@]} > 0 )); then
-        echo ""
-        echo "⚠  custom/ tiene dir(s) vacío(s) — probable mount viejo tras un rename/remoción:"
-        for name in $(echo "${!stale_mounts[@]}" | tr ' ' '\n' | sort); do
-            echo "     custom/$name"
-        done
-        echo "   Para limpiarlos (necesita sudo): sudo rmdir$(for name in $(echo "${!stale_mounts[@]}" | tr ' ' '\n' | sort); do printf ' ~/custom/%s' "$name"; done)"
-    fi
 }
 build_workspace
 
