@@ -142,6 +142,39 @@ else
     echo "discover-mounts: ${#detected[@]} proyecto(s) detectado(s) → ${detected[*]}"
 fi
 
+# ── Aviso de mountpoints viejos en data/custom/ ─────────────────────────────
+# El bind `./data/custom` (docker-compose.yml) PERSISTE en el host. Cuando se
+# saca o renombra una entrada del catálogo (p.ej. oba-project → oba), su
+# mountpoint queda como dir VACÍO en data/custom/ (root-owned, lo crea Docker).
+# Lo avisamos acá —initializeCommand en el HOST— porque SIEMPRE se ve en el log
+# del rebuild (el postStart, donde corre build_workspace, lo colapsa VS Code) y
+# porque acá el dir del host es accesible directo. Discriminador: en el host
+# TODOS los mountpoints están vacíos (el bind real se monta en runtime), así que
+# "vacío" no alcanza — un dir es stale si está vacío Y su nombre NO está en el
+# catálogo. El borrado necesita sudo → lo hace el dev; este script no toca nada.
+CUSTOM_DIR="${REPO_ROOT}/data/custom"
+if [[ -d "$CUSTOM_DIR" ]]; then
+    declare -A _keep=()
+    for entry in "${PROJECTS[@]}"; do
+        IFS='|' read -r id host target req <<<"$entry"
+        case "$target" in /home/odoo/custom/*) _keep["$(basename "$target")"]=1 ;; esac
+    done
+    for s in repositories src adhoc; do _keep["$s"]=1; done   # dirs estructurales del workspace
+    _stale=()
+    for d in "$CUSTOM_DIR"/*/; do
+        [[ -d "$d" ]] || continue
+        name="$(basename "$d")"
+        [[ -n "${_keep[$name]:-}" ]] && continue
+        [[ -z "$(ls -A "$d" 2>/dev/null)" ]] && _stale+=("$name")
+    done
+    if (( ${#_stale[@]} > 0 )); then
+        echo "discover-mounts: ⚠ mountpoint(s) viejo(s) vacío(s) en custom/ (probable rename/remoción): ${_stale[*]}" >&2
+        printf 'discover-mounts:   borralos (necesita sudo): sudo rmdir' >&2
+        for s in "${_stale[@]}"; do printf ' %s/%s' "$CUSTOM_DIR" "$s" >&2; done
+        printf '\n' >&2
+    fi
+fi
+
 # gh keyring → archivo
 # El keyring del SO (GNOME Keyring / KWallet) no es accesible dentro del
 # container. Si el token está ahí, gh auth falla adentro aunque el host
