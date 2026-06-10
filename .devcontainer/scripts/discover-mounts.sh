@@ -12,15 +12,18 @@
 # a mano; para mounts custom (path no-default, repo fuera del catálogo) usá
 # `docker-compose.override.yml` (opt-in manual, gitignored).
 #
-# TOPOLOGÍA DECLARADA EN oba-project (trabajo C — spec adhoc-way
-# `estandarizacion-oba.md` §4): el catálogo del ecosistema dejó de estar
-# hardcodeado acá. Lo declara el hub del proyecto OBA en
-# `oba-project/.adhoc/topology.yml`; este script conserva solo el MECANISMO
-# (leer el manifest, detectar presencia en host, emitir los binds). El único
-# path hardcodeado es el SEED: dónde está oba-project en el host (overridable
-# por env OBA_PROJECT_HOST). Si el manifest no está, el catálogo queda vacío y
-# el dev usa docker-compose.override.yml. Formato del manifest documentado en
-# el propio topology.yml (schema regular, parseado por bash puro — sin yq).
+# Catálogo embebido más abajo. Es config opinionada de ESTE devcontainer
+# (qué repos del ecosistema conviene montar al lado) — vive con el runtime,
+# no es topología de ningún proyecto. Cada entry declara:
+#   id              identificador corto (también nombre del dir en custom/).
+#   host_path       path absoluto en host. Soporta ${HOME} y ${REPO_ROOT}
+#                   (este último = path del propio repo docker-compose-odoo,
+#                   permite self-mount sin path hardcodeado).
+#   container_target target adentro del container (convención: custom/<id>).
+#   requires        id de otro proyecto que debe estar presente, o vacío.
+#                   Útil para mounts que dependen de otro (p.ej. self-mount
+#                   docker-compose-odoo requiere devops mounteado, porque el
+#                   target está adentro de custom/devops/).
 
 set -euo pipefail
 
@@ -36,89 +39,27 @@ if command -v gcloud &>/dev/null; then
     fi
 fi
 
-# ── Catálogo de mounts: leído del manifest declarado en oba-project ──────────
-# Seed mínimo (único path hardcodeado): dónde vive oba-project en el host.
-# Override por env si tu clone está en otro lado.
-OBA_PROJECT_HOST="${OBA_PROJECT_HOST:-${HOME}/repositorios/oba-project}"
-TOPOLOGY_FILE="${OBA_PROJECT_HOST}/.adhoc/topology.yml"
-
-PROJECTS=()
-
-# _yval VALUE → trim + des-quote de un escalar YAML simple.
-_yval() {
-    local v="$1"
-    v="${v#"${v%%[![:space:]]*}"}"   # ltrim
-    v="${v%"${v##*[![:space:]]}"}"   # rtrim
-    if [[ ${#v} -ge 2 && "$v" == \"*\" ]]; then v="${v:1:${#v}-2}"; fi
-    if [[ ${#v} -ge 2 && "$v" == \'*\' ]]; then v="${v:1:${#v}-2}"; fi
-    printf '%s' "$v"
-}
-
-# _emit_project ID HOST TARGET REQ → expande ${HOME}/${REPO_ROOT} y push a PROJECTS.
-_emit_project() {
-    local id="$1" host="$2" target="$3" req="$4"
-    [[ -z "$id" ]] && return 0
-    host="${host//\$\{HOME\}/$HOME}";     host="${host//\$\{REPO_ROOT\}/$REPO_ROOT}"
-    target="${target//\$\{HOME\}/$HOME}"; target="${target//\$\{REPO_ROOT\}/$REPO_ROOT}"
-    # Entrada incompleta (falta host_path o container_target) → la salteo en vez
-    # de emitir un bind inválido (`- /host:` o `- :/target`) que rompería compose.
-    if [[ -z "$host" || -z "$target" ]]; then
-        echo "discover-mounts: AVISO — entrada '$id' incompleta en el manifest (host_path/container_target vacío); la salteo." >&2
-        return 0
-    fi
-    PROJECTS+=("${id}|${host}|${target}|${req}")
-}
-
-# Parser bash puro (corre en el host de cada dev — sin depender de yq). Schema
-# regular: lista `mounts:` de entradas `- id:` con host_path/container_target/
-# requires. Comentarios (#) y líneas en blanco se ignoran.
-parse_topology() {
-    local file="$1" line in_mounts=0
-    local id="" host="" target="" req=""
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        line="${line#"${line%%[![:space:]]*}"}"          # ltrim
-        [[ -z "$line" || "$line" == \#* ]] && continue    # blank / comentario
-        if [[ "$line" == "mounts:"* ]]; then in_mounts=1; continue; fi
-        [[ "$in_mounts" == 1 ]] || continue
-        case "$line" in
-            "- id:"*)             _emit_project "$id" "$host" "$target" "$req"
-                                  id="$(_yval "${line#- id:}")"; host=""; target=""; req="" ;;
-            "host_path:"*)        host="$(_yval "${line#host_path:}")" ;;
-            "container_target:"*) target="$(_yval "${line#container_target:}")" ;;
-            "requires:"*)         req="$(_yval "${line#requires:}")" ;;
-        esac
-    done < "$file"
-    _emit_project "$id" "$host" "$target" "$req"          # flush último
-}
-
-if [[ -r "$TOPOLOGY_FILE" ]]; then
-    parse_topology "$TOPOLOGY_FILE"
-    echo "discover-mounts: catálogo leído de $TOPOLOGY_FILE (${#PROJECTS[@]} entradas)" >&2
-else
-    echo "discover-mounts: AVISO — no encontré $TOPOLOGY_FILE." >&2
-    echo "discover-mounts:   oba-project es REQUERIDO para el workspace OBA (es el hub de specs/topología)." >&2
-    echo "discover-mounts:   cloná oba-project en \$HOME/repositorios/oba-project (o seteá OBA_PROJECT_HOST)." >&2
-    echo "discover-mounts:   El devcontainer igual levanta, pero sin mounts del ecosistema; para mounts" >&2
-    echo "discover-mounts:   custom usá docker-compose.override.yml (opt-in)." >&2
-fi
-
-# GCP legacy credentials: mount runtime-específico (path computado del host),
-# NO topología declarada → se agrega acá, no en el manifest.
+PROJECTS=(
+    "devops|${HOME}/repositorios/devops|/home/odoo/custom/devops|"
+    "adhoc-way|${HOME}/repositorios/adhoc-way|/home/odoo/custom/adhoc-way|"
+    "tuqui|${HOME}/tuqui|/home/odoo/custom/tuqui|"
+    # oba-project y oba-project-memory quedan top-level sin prefijo (aunque son
+    # repos de la org ingadhoc/): todo dev OBA los necesita, no son opt-in
+    # (regla aflojada — ADR 0027). oba-project = hub de specs/decisiones;
+    # oba-project-memory = wiki/memoria.
+    "oba-project|${HOME}/repositorios/oba-project|/home/odoo/custom/oba-project|"
+    "oba-project-memory|${HOME}/repositorios/oba-project-memory|/home/odoo/custom/oba-project-memory|"
+    # Self-mount del propio docker-compose-odoo deshabilitado (mayo 2026):
+    # cuando devops ya está mounteado, el bind anidado en
+    # custom/devops/docker-compose-odoo aparece como dir dummy en lugar del
+    # contenido real del repo host. Revisar más adelante — probablemente
+    # con flag opt-in en lugar de auto, o cambiando el target fuera de
+    # custom/devops/ para evitar el bind anidado.
+    # "docker-compose-odoo|${REPO_ROOT}|/home/odoo/custom/devops/docker-compose-odoo|devops"
+    "odumbo|${HOME}/repositorios/odumbo|/home/odoo/custom/odumbo|"
+    "consultoria-tecnica|${HOME}/repositorios/consultoria-tecnica|/home/odoo/custom/consultoria-tecnica|"
+)
 [[ -n "$_gcp_src" ]] && PROJECTS+=("gcp-credentials|${_gcp_src}|/home/odoo/gcloud_legacy_credentials:ro|")
-
-# Catálogo vacío (manifest ausente y sin GCP) → emitir salida mínima y salir,
-# evitando expandir un array vacío bajo `set -u` en el engine de abajo.
-if (( ${#PROJECTS[@]} == 0 )); then
-    {
-        echo "# docker-compose.auto-mounts.yml — AUTO-GENERATED por discover-mounts.sh"
-        echo "# Catálogo vacío (sin $TOPOLOGY_FILE y sin GCP). Usá docker-compose.override.yml."
-        echo ""
-        echo "services:"
-        echo "  odoo: {}"
-    } > "$OUT"
-    echo "discover-mounts: catálogo vacío → 0 mounts del ecosistema."
-    exit 0
-fi
 
 declare -A PRESENT=()
 declare -A SOURCES=()

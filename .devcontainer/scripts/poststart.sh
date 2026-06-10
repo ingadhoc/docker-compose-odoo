@@ -599,10 +599,16 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 # Los mounts se generan auto en el HOST pre-rebuild via
 # `discover-mounts.sh` (initializeCommand de devcontainer.json), que
 # detecta presencia de paths del ecosistema y los emite a
-# `docker-compose.auto-mounts.yml`. El catálogo de paths ya NO está
-# hardcodeado: lo declara `oba-project/.adhoc/topology.yml` (trabajo C —
-# spec adhoc-way `estandarizacion-oba.md` §4); discover-mounts.sh lo lee
-# desde el host (seed `${HOME}/repositorios/oba-project`).
+# `docker-compose.auto-mounts.yml`. Convención de paths host por defecto
+# (catálogo hardcodeado en discover-mounts.sh — config de este devcontainer):
+#
+#   ${HOME}/repositorios/devops/              → /home/odoo/custom/devops
+#   ${HOME}/repositorios/adhoc-way/           → /home/odoo/custom/adhoc-way
+#   ${HOME}/tuqui/                            → /home/odoo/custom/tuqui
+#   ${HOME}/repositorios/oba-project/         → /home/odoo/custom/oba-project
+#   ${HOME}/repositorios/oba-project-memory/  → /home/odoo/custom/oba-project-memory
+#   ${HOME}/repositorios/odumbo/              → /home/odoo/custom/odumbo
+#   ${HOME}/repositorios/consultoria-tecnica/ → /home/odoo/custom/consultoria-tecnica
 #
 # Para paths no-default o repos fuera del catálogo, el dev declara mounts
 # manuales en `docker-compose.override.yml` (opt-in, gitignored).
