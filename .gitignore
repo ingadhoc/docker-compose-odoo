@@ -16,6 +16,9 @@ docker-compose.override.yml
 # (initializeCommand). Per-machine — refleja qué paths del ecosistema existen
 # en el host de cada dev.
 docker-compose.auto-mounts.yml
+# Mapeo host→container de repos del ecosistema para share-claude-sessions.sh.
+# Auto-generado por discover-mounts.sh; per-machine (paths del host de cada dev).
+.devcontainer/scripts/.session-mounts.tsv
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
 !.devcontainer/workspace/.gitkeep

@@ -27,7 +27,8 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 OUT="${REPO_ROOT}/docker-compose.auto-mounts.yml"
 
 # GCP legacy credentials: resolver cuenta activa antes de armar el catálogo.
@@ -141,6 +142,24 @@ if (( ${#detected[@]} == 0 )); then
 else
     echo "discover-mounts: ${#detected[@]} proyecto(s) detectado(s) → ${detected[*]}"
 fi
+
+# ── Mapeo de sesiones Claude para share-claude-sessions.sh ──────────────────
+# Ese script corre DENTRO del container y necesita el path del HOST (resuelto,
+# con $HOME ya expandido) de cada repo del ecosistema para bridgear la historia
+# de sesiones de Claude host↔container (los repos se montan en /home/odoo/custom
+# pero en el host viven en ~/repositorios/<id>, path no derivable adentro).
+# Acá —en el host— tenemos ambos lados resueltos; los volcamos a un TSV que
+# viaja al container por el bind /scripts. Solo repos bajo custom/ (los que un
+# dev abre en Claude); credenciales/infra quedan afuera. Ver ADR 0023.
+SESSION_MOUNTS="${SCRIPT_DIR}/.session-mounts.tsv"
+{
+    for id in "${detected[@]}"; do
+        target="${TARGETS[$id]%%:*}"                     # sin modo (:ro)
+        case "$target" in
+            /home/odoo/custom/*) printf '%s\t%s\n' "${SOURCES[$id]}" "$target" ;;
+        esac
+    done
+} > "$SESSION_MOUNTS"
 
 # ── Aviso de mountpoints viejos en data/custom/ ─────────────────────────────
 # El bind `./data/custom` (docker-compose.yml) PERSISTE en el host. Cuando se
