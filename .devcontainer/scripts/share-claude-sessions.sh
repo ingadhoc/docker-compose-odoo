@@ -65,6 +65,15 @@ ensure_link() {
     # Ya es symlink → idempotente.
     [ -L "$container_path" ] && return 0
 
+    # Existe pero no es symlink ni dir (archivo regular u otro tipo): no lo
+    # tocamos. Sin esto, `ln -s` fallaría y —por `set -e`— abortaría todo el
+    # bridging por una sola entrada rara. Coherente con el WARN del merge.
+    if [ -e "$container_path" ] && [ ! -d "$container_path" ]; then
+        echo "share-claude-sessions: WARN — $container_path existe y no es symlink ni dir; se deja intacto." >&2
+        warned=$((warned + 1))
+        return 0
+    fi
+
     # Dir real: mergear al dir del host y eliminarlo antes de symlinkear. Nunca
     # priorizamos sesiones del container sobre las del host compartido. `mv -n`
     # (no-clobber) evita pisar; los SESSION-ID.jsonl son únicos, no debería
