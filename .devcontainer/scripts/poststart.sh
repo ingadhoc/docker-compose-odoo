@@ -654,6 +654,16 @@ for_each_mounted_project() {
 }
 for_each_mounted_project
 
+# Symlink de reglas Claude Code desde proyecto oba mounteado
+OBA_REVIEW_RULE="$HOME/custom/oba/review/odoo-adhoc.md"
+CLAUDE_RULES_DIR="$HOME/custom/.claude/rules"
+if [[ -f "$OBA_REVIEW_RULE" ]]; then
+    mkdir -p "$CLAUDE_RULES_DIR"
+    ln -sf "$OBA_REVIEW_RULE" "$CLAUDE_RULES_DIR/odoo-adhoc.md"
+    echo "Symlink creado: $CLAUDE_RULES_DIR/odoo-adhoc.md → $OBA_REVIEW_RULE"
+else
+    echo "oba no mounteado o review/odoo-adhoc.md no existe — skip symlink rules."
+fi
 
 # Allow-list base de Claude Code (operaciones read-only) — reduce prompts
 # durante demos / análisis. Idempotente: solo escribe si no existe el archivo.
