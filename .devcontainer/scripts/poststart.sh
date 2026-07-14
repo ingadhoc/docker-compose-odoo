@@ -477,6 +477,7 @@ INGADHOC_SKILLS=(
     "odoo-review"               # antes: odoo-code-review (rota silenciosa)
     "odoo-translator"
     "odoo-upgrade-migration"
+    "odoo-upgrade-lines"        # Upgrade Lines (saas_provider_upgrade) — task 69549
     "odoo-test-from-commit"
     "odoo-test-from-video"
     "odoo-module-generator"
