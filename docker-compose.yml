@@ -3,6 +3,8 @@ services:
     image: $ODOO_IMAGE:$ODOO_MINOR
     command: sleep infinity
     container_name: odoo-${ODOO_VERSION}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/custom:/home/odoo/custom
       # - default:/home/odoo/src
@@ -88,7 +90,7 @@ services:
     networks:
       adhoc:
         ipv4_address: 172.60.0.${ODOO_VERSION}
-      minikube:
+      # minikube:
 
 volumes:
   odoo_data:
@@ -98,6 +100,6 @@ networks:
   adhoc:
     name: adhoc
     external: true
-  minikube:
-    name: minikube
-    external: true
+  # minikube:
+  #   name: minikube
+  #   external: true
