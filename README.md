@@ -52,6 +52,8 @@ Si exportás `R2_ENABLE_DEVOPS=1` en el host antes de abrir el devcontainer, `di
 
 `~/.docker` se monta intencionalmente en `/home/odoo/.docker-host` (no en `/home/odoo/.docker`) para no pisar el path donde VS Code Dev Containers escribe su `config.json` de credential-forwarding durante el attach. El devcontainer setea `DOCKER_CONFIG=/home/odoo/.docker-host` en `remoteEnv`, así las herramientas devops (`docker`, `docker-compose`, etc.) leen las credenciales del host desde ese path. VS Code sigue libre para escribir `/home/odoo/.docker/config.json` con su helper propio.
 
+Si `R2_ENABLE_DEVOPS` no está activo, `/home/odoo/.docker-host` no existe; Docker CLI ignora gracefulmente un `DOCKER_CONFIG` inexistente y cae al default (`~/.docker/config.json`), por lo que la variable es segura en cualquier caso.
+
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 
 ## Repos en custom/repositories/

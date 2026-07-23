@@ -38,6 +38,8 @@
     // Host ~/.docker se monta en /home/odoo/.docker-host:ro (ver discover-mounts.sh).
     // DOCKER_CONFIG apunta ahí para que devops tools lean las credenciales del host
     // sin pisar /home/odoo/.docker, que VS Code Dev Containers necesita escribir.
+    // Si R2_ENABLE_DEVOPS no está activo el directorio no existe: Docker CLI ignora
+    // gracefulmente DOCKER_CONFIG inexistente y cae al default (~/.docker/config.json).
     "DOCKER_CONFIG": "/home/odoo/.docker-host"
   },
 

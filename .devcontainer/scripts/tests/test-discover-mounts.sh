@@ -59,6 +59,11 @@ docker_mount_line="$(grep -E '\.docker' "$OUT" || true)"
 echo "--- docker mount line ---"
 echo "$docker_mount_line"
 
+if [[ -z "$docker_mount_line" ]]; then
+    echo "FAIL: no se encontró ninguna línea de mount para ~/.docker"
+    exit 1
+fi
+
 if echo "$docker_mount_line" | grep -qE '/home/odoo/\.docker:ro'; then
     echo "FAIL: ~/.docker todavía se monta en /home/odoo/.docker (pisaría VS Code)"
     exit 1
