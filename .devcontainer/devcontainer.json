@@ -34,7 +34,11 @@
     "AD_DEV_MODE": "NORMAL",
     // export R2_ENABLE_DEVOPS=1 en el host activa mounts y herramientas devops.
     "R2_ENABLE_DEVOPS": "${localEnv:R2_ENABLE_DEVOPS}",
-    "KUBECONFIG": "/home/odoo/.kube/config"
+    "KUBECONFIG": "/home/odoo/.kube/config",
+    // Host ~/.docker se monta en /home/odoo/.docker-host:ro (ver discover-mounts.sh).
+    // DOCKER_CONFIG apunta ahí para que devops tools lean las credenciales del host
+    // sin pisar /home/odoo/.docker, que VS Code Dev Containers necesita escribir.
+    "DOCKER_CONFIG": "/home/odoo/.docker-host"
   },
 
   // Configure tool-specific properties.

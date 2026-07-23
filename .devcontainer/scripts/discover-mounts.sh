@@ -108,11 +108,15 @@ done
 
 # Mounts devops — solo si R2_ENABLE_DEVOPS=1 en el host.
 # Agrega ~/.kube, ~/.config/gcloud y el socket de Docker al servicio odoo.
+# NOTA: ~/.docker se monta en /home/odoo/.docker-host (no en /home/odoo/.docker)
+# para no pisar el path donde VS Code Dev Containers escribe su credential-helper
+# durante el attach. Las herramientas devops deben usar DOCKER_CONFIG=/home/odoo/.docker-host
+# (ya seteado en devcontainer.json remoteEnv) para leer el login de Docker del host.
 devops_mounts=()
 if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
     [[ -d "${HOME}/.kube" ]]           && devops_mounts+=("${HOME}/.kube:/home/odoo/.kube:ro")
     [[ -d "${HOME}/.config/gcloud" ]]  && devops_mounts+=("${HOME}/.config/gcloud:/home/odoo/.config/gcloud:ro")
-    [[ -d "${HOME}/.docker" ]]         && devops_mounts+=("${HOME}/.docker:/home/odoo/.docker:ro")
+    [[ -d "${HOME}/.docker" ]]         && devops_mounts+=("${HOME}/.docker:/home/odoo/.docker-host:ro")
     [[ -S /var/run/docker.sock ]]      && devops_mounts+=("/var/run/docker.sock:/var/run/docker.sock")
     echo "discover-mounts: R2_ENABLE_DEVOPS=1 — ${#devops_mounts[@]} mount(s) devops." >&2
 fi

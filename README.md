@@ -41,6 +41,17 @@ Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo
 
 `poststart.sh` corre adentro del container y registra los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md` para listarlos en el AGENTS.md consolidado del workspace. No ejecuta código del proyecto automáticamente.
 
+## Modo devops (`R2_ENABLE_DEVOPS=1`)
+
+Si exportás `R2_ENABLE_DEVOPS=1` en el host antes de abrir el devcontainer, `discover-mounts.sh` agrega mounts de infraestructura al servicio `odoo`:
+
+- `${HOME}/.kube/`        → `/home/odoo/.kube` (read-only)
+- `${HOME}/.config/gcloud/` → `/home/odoo/.config/gcloud` (read-only)
+- `${HOME}/.docker/`      → `/home/odoo/.docker-host` (read-only)
+- `/var/run/docker.sock`  → `/var/run/docker.sock`
+
+`~/.docker` se monta intencionalmente en `/home/odoo/.docker-host` (no en `/home/odoo/.docker`) para no pisar el path donde VS Code Dev Containers escribe su `config.json` de credential-forwarding durante el attach. El devcontainer setea `DOCKER_CONFIG=/home/odoo/.docker-host` en `remoteEnv`, así las herramientas devops (`docker`, `docker-compose`, etc.) leen las credenciales del host desde ese path. VS Code sigue libre para escribir `/home/odoo/.docker/config.json` con su helper propio.
+
 Spec: [ingadhoc/adhoc-way#99 — aplicar adhoc-way al ecosistema OBA](https://github.com/ingadhoc/adhoc-way/pull/99) (decisiones §6 #11-#15). Sin compatibilidad hacia atrás con el modelo viejo `custom/<proyecto>-ctx/`.
 
 ## Repos en custom/repositories/
