@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test focal para el fix de R2_ENABLE_DEVOPS ~/.docker mount.
+# Focused test for the R2_ENABLE_DEVOPS ~/.docker mount fix.
 #
 # Ejecuta discover-mounts.sh con un HOME temporal y verifica que el bind mount
 # de ~/.docker apunte a /home/odoo/.docker-host (no a /home/odoo/.docker),
