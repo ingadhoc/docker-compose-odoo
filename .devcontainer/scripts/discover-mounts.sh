@@ -117,13 +117,36 @@ if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
     echo "discover-mounts: R2_ENABLE_DEVOPS=1 — ${#devops_mounts[@]} mount(s) devops." >&2
 fi
 
+# Estado per-user de los workspaces de adhocway (módulo `adhocway`, provider
+# `docker` del entorno local: Odoo adentro del devcontainer le pide containers al
+# daemon del host).
+#
+# A diferencia de todo el catálogo de arriba, este mount NO puede remapear el path:
+# los bind mounts de esos containers los resuelve el daemon del HOST, así que el
+# path que Odoo pasa en el `docker run` tiene que existir allá con el MISMO nombre.
+# De ahí `${HOME}/adhocway-state:${HOME}/adhocway-state` en vez de un target bajo
+# `custom/`. Si los dos lados no coinciden, el workspace arranca vacío y nada en el
+# log de Odoo lo insinúa.
+#
+# Opt-in por presencia del dir, igual que el resto del catálogo: al que no usa la
+# plataforma no se le monta ni se le crea nada. Y el dir se crea a mano
+# (`mkdir -p ~/adhocway-state`) a propósito — si no existe, el bind lo crea Docker
+# como root y Odoo, que corre con otro uid, no puede escribir adentro: el container
+# del workspace muere con `Permission denied` sobre su propio `.config`, sin
+# mencionar permisos ni uid en ninguna parte.
+adhocway_state_mounts=()
+if [[ -d "${HOME}/adhocway-state" ]]; then
+    adhocway_state_mounts+=("${HOME}/adhocway-state:${HOME}/adhocway-state")
+    echo "discover-mounts: adhocway-state → mismo path en host y container (${HOME}/adhocway-state)." >&2
+fi
+
 {
     echo "# docker-compose.auto-mounts.yml — AUTO-GENERATED por"
     echo "# .devcontainer/scripts/discover-mounts.sh (initializeCommand)."
     echo "# NO EDITAR A MANO: cambios se pierden en el próximo rebuild."
     echo "# Para mounts custom (path no-default) usá docker-compose.override.yml."
     echo "#"
-    if (( ${#detected[@]} == 0 && ${#devops_mounts[@]} == 0 )); then
+    if (( ${#detected[@]} == 0 && ${#devops_mounts[@]} == 0 && ${#adhocway_state_mounts[@]} == 0 )); then
         echo "# Proyectos detectados: ninguno."
         echo ""
         echo "services:"
@@ -143,6 +166,9 @@ fi
             echo "      - ${SOURCES[$id]}:${TARGETS[$id]}"
         done
         for mount in "${devops_mounts[@]}"; do
+            echo "      - $mount"
+        done
+        for mount in "${adhocway_state_mounts[@]}"; do
             echo "      - $mount"
         done
     fi
