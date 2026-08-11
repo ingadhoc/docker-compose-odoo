@@ -797,4 +797,45 @@ if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
     ~/.resources/entrypoint
 fi
 
+# custom/odoo montado en una branch saas-* — asegurar que el core que se importa
+# sea el montado y no el baked en la imagen.
+#
+# 450-install-custom-odoo (entrypoint de la imagen) hace `pip install -e custom/odoo`,
+# y en esas branches release.py reporta una versión tipo `saas~19.4`, que no es PEP 440:
+# setuptools la rechaza con InvalidVersion. El script no mira el exit code, así que el
+# install falla sin ruido y queda el editable baked de src/odoo, mientras
+# 400-auto-detect-addons ya apuntó el addons_path a custom/ — core y addons terminan
+# en branches distintas, sin ningún error visible para el dev.
+#
+# Corre después del entrypoint a propósito: primero actúa el mecanismo oficial, y solo
+# corregimos si el core quedó apuntando a otro lado.
+# Transitorio pre-bake OCI: cuando 450-install-custom-odoo tenga su propio fallback, sacar este bloque.
+if [ -d "$HOME/custom/odoo" ] && command -v python &>/dev/null; then
+    python - <<'PY' || echo "FALLO: no se pudo verificar el core de odoo"
+import os
+import sysconfig
+from importlib.util import find_spec
+
+custom_odoo = os.path.join(os.path.expanduser('~'), 'custom', 'odoo')
+site_packages = sysconfig.get_paths()['purelib']
+
+spec = find_spec('odoo')
+locations = list(spec.submodule_search_locations or []) if spec else []
+
+if any(p.startswith(custom_odoo + os.sep) for p in locations):
+    print('odoo core: %s ya activo.' % custom_odoo)
+else:
+    for name in sorted(os.listdir(site_packages)):
+        if name.startswith('__editable__.odoo-') and name.endswith('.pth'):
+            baked = os.path.join(site_packages, name)
+            os.rename(baked, baked + '.disabled')
+            print('odoo core: desactivado el install baked (%s).' % name)
+    # El nombre ordena último para que la fuente montada se agregue después de
+    # las entradas que ya trae site-packages (odoo/upgrade, entre otras).
+    with open(os.path.join(site_packages, 'zzz-custom-odoo.pth'), 'w') as pth:
+        pth.write(custom_odoo + '\n')
+    print('odoo core: linkeado %s via zzz-custom-odoo.pth.' % custom_odoo)
+PY
+fi
+
 exit 0
