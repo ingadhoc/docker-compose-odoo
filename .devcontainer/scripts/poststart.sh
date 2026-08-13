@@ -293,6 +293,36 @@ install_cli_if_missing gemini @google/gemini-cli
 # Se mantiene en el devcontainer para que el dev pueda elegir agente.
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
+# Auth de git hacia GitHub — fallback a HTTPS cuando no hay clave SSH.
+#
+# VS Code copia el `~/.gitconfig` del host al crear el container (no lo
+# montea), y en el host la clave SSH existe, así que nada declara el
+# fallback a HTTPS acá adentro. Si el agente forwardeado no tiene clave
+# utilizable para GitHub, todo remote `git@github.com:` falla: el
+# `git ls-remote` de install_adhoc_way cae al fallback de reinstalar
+# (WARN visible en el log del postCreate), y al dev le fallan fetch y
+# pull en cada repo con remote SSH.
+#
+# Estrictamente aditivo, en dos condiciones:
+#   1. Si SSH autentica contra GitHub, no se toca nada.
+#   2. Si el dev ya declaró un insteadOf propio, se respeta.
+# O sea: solo escribe donde hoy está roto. La reescritura reusa el
+# credential helper que VS Code ya inyecta, y queda acotada a github.com.
+ensure_github_https_fallback() {
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+           -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+        echo "git: SSH a GitHub autentica; dejo los remotes como están."
+        return 0
+    fi
+    if [ -n "$(git config --global --get-all url."https://github.com/".insteadOf 2>/dev/null)" ]; then
+        echo "git: insteadOf hacia GitHub ya declarado; no lo piso."
+        return 0
+    fi
+    git config --global url."https://github.com/".insteadOf "git@github.com:"
+    echo "git: SSH a GitHub no autentica; remotes git@github.com: reescritos a HTTPS."
+}
+ensure_github_https_fallback
+
 # adhoc-way — CLI del patrón cross-vendor (ingadhoc/adhoc-way).
 #
 # Reinstalación condicional: comparamos el SHA del HEAD remoto contra
