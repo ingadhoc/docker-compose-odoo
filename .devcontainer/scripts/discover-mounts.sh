@@ -44,7 +44,6 @@ PROJECTS=(
     "devops|${HOME}/repositorios/devops|/home/odoo/custom/devops|"
     "devops-it|${HOME}/repositorios/devops-it|/home/odoo/custom/devops-it|"
     "adhoc-way|${HOME}/repositorios/adhoc-way|/home/odoo/custom/adhoc-way|"
-    "tuqui|${HOME}/tuqui|/home/odoo/custom/tuqui|"
     # oba y oba-project-memory quedan top-level sin prefijo (aunque son repos de
     # la org ingadhoc/): todo dev OBA los necesita, no son opt-in (regla aflojada
     # — ADR 0027). El PROYECTO es "oba" (mount custom/oba, clone ~/repositorios/oba);
