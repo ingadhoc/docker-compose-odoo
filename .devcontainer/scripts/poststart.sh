@@ -100,42 +100,33 @@ build_workspace() {
         done
     fi
 
-    # AGENTS.md dinámico + CLAUDE.md/GEMINI.md (estándar adhoc-way)
+    # workspace-map.md — las tres listas dinámicas del workspace (proyectos
+    # montados, otros repos en custom/, repos del dev), generadas en cada
+    # rebuild. La parte fija del AGENTS.md ya no se genera acá: vive
+    # versionada en oba-project (workspace/custom-AGENTS.md) y se symlinkea
+    # más abajo — mismo patrón que review/odoo-adhoc.md.
     {
-        cat <<'INTRO'
-# Workspace OBA
+        cat <<'MAPHEAD'
+# Workspace map
 
-Iniciá `claude`, `codex` o `gemini` desde `/home/odoo/custom/` para trabajo cross-repo.
-Para bugs acotados a un módulo podés iniciar desde ese repo directamente.
+_Generado por el postStart en cada rebuild — no editar. La parte fija del workspace está en [`AGENTS.md`](./AGENTS.md)._
 
-## Modos de trabajo (proyectos del ecosistema mounteados)
+## Proyectos del ecosistema montados
 
-Al pararte acá con un agente IA, elegí el modo según el tema. Los proyectos del ecosistema (devops, adhoc-way, tuqui, etc.) se detectan automáticamente en el host pre-rebuild (`initializeCommand` → `discover-mounts.sh`) y aparecen como `custom/<proyecto>/` con su `AGENTS.md` propio. El agente carga el `AGENTS.md` del proyecto correspondiente cuando se para adentro.
-
-INTRO
+MAPHEAD
         if [[ ${#projects[@]} -eq 0 ]]; then
-            echo "_Sin proyectos del ecosistema detectados en el host. \`discover-mounts.sh\` busca por default \`~/repositorios/{devops,adhoc-way}\` y \`~/tuqui\` — cloná alguno y rebuild, o agregá un mount custom en \`docker-compose.override.yml\`._"
+            echo "_Sin proyectos del ecosistema detectados en el host. \`discover-mounts.sh\` busca por default \`~/repositorios/{devops,adhoc-way,oba,...}\` — cloná alguno y rebuild, o agregá un mount custom en \`docker-compose.override.yml\`._"
         else
             for name in $(echo "${!projects[@]}" | tr ' ' '\n' | sort); do
                 path="${projects[$name]}"
                 echo "- **$name**: \`$path/\` — ver \`$path/AGENTS.md\`."
             done
         fi
-        cat <<'STRUCT'
-
-**Default** (sin contexto explícito): módulos OBA, tareas Tuqui, debugging Odoo. Seguir lo que sigue en este AGENTS.md.
-
-## Estructura
-
-- **`repositories/`:** repos del dev con módulos Odoo (editables, branch activa).
-- **Proyectos del ecosistema mounteados:** ver sección "Modos de trabajo" arriba (`custom/<proyecto>/` con `AGENTS.md` propio, auto-detectados por `discover-mounts.sh`).
-- **Otros repos en `custom/`:** clones directos del dev sin `AGENTS.md` (overrides de baked como `odoo`/`enterprise`, repos puntuales). Listado efectivo abajo.
-- **`src/`:** repos baked de la imagen no presentes en `custom/` (referencia, symlinks de container).
-  - `src/repositories/`: repos baked no en `repositories/`.
+        cat <<'MAPOTHERS'
 
 ## Otros repos en custom/ (sin AGENTS.md, fuera de repositories/ y src/)
 
-STRUCT
+MAPOTHERS
         if [[ ${#custom_others[@]} -eq 0 ]]; then
             echo "_Ninguno todavía._"
         else
@@ -143,11 +134,11 @@ STRUCT
                 echo "- \`$name\`"
             done
         fi
-        cat <<'MIDDLE'
+        cat <<'MAPREPOS'
 
 ## Repos del dev en repositories/
 
-MIDDLE
+MAPREPOS
         if [[ ${#in_custom[@]} -eq 0 ]]; then
             echo "_Ningún repo de módulos clonado todavía._"
         else
@@ -155,16 +146,31 @@ MIDDLE
                 echo "- \`$name\`"
             done
         fi
-        cat <<'FOOTER'
+    } > "$CUSTOM/workspace-map.md"
 
-## Cómo navegar
+    # AGENTS.md — symlink a la parte fija versionada en oba-project.
+    # rm previo: si quedó un symlink colgado (oba desmontado), el cat del
+    # fallback escribiría a través de él; el rm deja ambos casos uniformes.
+    local oba_custom_agents="$CUSTOM/oba/workspace/custom-AGENTS.md"
+    rm -f "$CUSTOM/AGENTS.md"
+    if [[ -f "$oba_custom_agents" ]]; then
+        ln -s "$oba_custom_agents" "$CUSTOM/AGENTS.md"
+        echo "AGENTS.md → $oba_custom_agents"
+    else
+        # Stub mínimo: apunta a la fuente en vez de duplicar su contenido.
+        cat > "$CUSTOM/AGENTS.md" <<'STUB'
+# Workspace OBA
 
-- **Wiki del módulo:** `oba-project-memory/wiki/19/<categoría>/<producto>/<módulo>.md` (en `custom/` o `src/`)
-- **Convenciones Adhoc:** en `~/.claude/CLAUDE.md` (cargado globalmente).
-- **Traer repo baked al workspace:** `workspace-add <nombre>`
-- **Sacarlo:** `workspace-rm <nombre>`
-FOOTER
-    } > "$CUSTOM/AGENTS.md"
+La parte fija de este AGENTS.md vive versionada en `ingadhoc/oba-project`
+(`workspace/custom-AGENTS.md`) y acá falta porque el proyecto `oba` no está
+montado: clonalo en `~/repositorios/oba` y rebuildeá (`discover-mounts.sh`
+lo detecta solo).
+
+Los listados del workspace (proyectos del ecosistema montados, otros repos
+en `custom/`, repos del dev) están en [`workspace-map.md`](./workspace-map.md).
+STUB
+        echo "oba no montado — AGENTS.md stub generado."
+    fi
 
     cat > "$CUSTOM/CLAUDE.md" <<'EOF'
 # CLAUDE.md
@@ -656,8 +662,8 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 #
 # Este helper corre adentro del container, post-mount: itera
 # `custom/<project>/` con `AGENTS.md` y registra qué proyectos están
-# activos. El AGENTS.md consolidado del workspace lo regenera
-# `build_workspace` aparte.
+# activos. Las listas dinámicas del workspace las regenera `build_workspace`
+# aparte, en custom/workspace-map.md (el AGENTS.md es symlink a oba-project).
 #
 # Decisión sobre hooks opt-in:
 #   Se evaluó ejecutar automáticamente `<project>/scripts/devcontainer-
