@@ -7,7 +7,7 @@
   "service": "odoo",
   // initializeCommand corre en host antes de docker compose up. Regenera
   // docker-compose.auto-mounts.yml descubriendo qué proyectos del ecosistema
-  // (devops, adhoc-way, tuqui, self) están presentes en el host. Ver script.
+  // (devops, adhoc-way, oba, self) están presentes en el host. Ver script.
   "initializeCommand": ".devcontainer/scripts/discover-mounts.sh",
   // "workspaceFolder": "/workspace",
   // "workspaceFolder": "/home/odoo/custom/repositories",

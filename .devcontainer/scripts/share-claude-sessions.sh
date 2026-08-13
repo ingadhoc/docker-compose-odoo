@@ -17,7 +17,7 @@
 #      Transformación puramente por string sobre el nombre encoded — no
 #      necesita saber el $HOME ni la versión del host (los lee del nombre).
 #
-#   2. Repos del ecosistema (devops, adhoc-way, tuqui, oba, …) montados por
+#   2. Repos del ecosistema (devops, adhoc-way, oba, …) montados por
 #      discover-mounts.sh desde ~/repositorios/<id> del host hacia
 #      /home/odoo/custom/<id> (bind anidado). Acá el path del host NO es
 #      derivable del container, así que discover-mounts —que corre en el host y
