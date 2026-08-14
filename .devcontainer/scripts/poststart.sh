@@ -163,19 +163,30 @@ MAPREPOS
             echo "       en el host, cloná ingadhoc/oba-project-memory en ~/repositorios/oba/digest"
         fi
     else
+        # Dos motivos distintos para el stub, y el fix es distinto en cada uno:
+        # oba sin montar (cloná y rebuildeá) vs. oba montado con un clone viejo,
+        # anterior a que el archivo existiera (git pull). Decir "no está
+        # montado" cuando sí lo está manda al dev a hacer lo que ya hizo.
+        local stub_por
+        if [[ -d "$CUSTOM/oba" ]]; then
+            stub_por="el clone montado en \`custom/oba\` todavía no tiene ese archivo:
+actualizalo (\`git pull\` en \`~/repositorios/oba\`) y rebuildeá."
+            echo "AVISO: oba montado pero sin workspace/custom-AGENTS.md (clone viejo) — AGENTS.md stub generado."
+        else
+            stub_por="el proyecto \`oba\` no está montado: clonalo en
+\`~/repositorios/oba\` y rebuildeá (\`discover-mounts.sh\` lo detecta solo)."
+            echo "oba no montado — AGENTS.md stub generado."
+        fi
         # Stub mínimo: apunta a la fuente en vez de duplicar su contenido.
-        cat > "$CUSTOM/AGENTS.md" <<'STUB'
+        cat > "$CUSTOM/AGENTS.md" <<STUB
 # Workspace OBA
 
-La parte fija de este AGENTS.md vive versionada en `ingadhoc/oba-project`
-(`workspace/custom-AGENTS.md`) y acá falta porque el proyecto `oba` no está
-montado: clonalo en `~/repositorios/oba` y rebuildeá (`discover-mounts.sh`
-lo detecta solo).
+La parte fija de este AGENTS.md vive versionada en \`ingadhoc/oba-project\`
+(\`workspace/custom-AGENTS.md\`) y acá falta porque $stub_por
 
 Los listados del workspace (proyectos del ecosistema montados, otros repos
-en `custom/`, repos del dev) están en [`workspace-map.md`](./workspace-map.md).
+en \`custom/\`, repos del dev) están en [\`workspace-map.md\`](./workspace-map.md).
 STUB
-        echo "oba no montado — AGENTS.md stub generado."
     fi
 
     cat > "$CUSTOM/CLAUDE.md" <<'EOF'
