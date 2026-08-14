@@ -44,14 +44,14 @@ PROJECTS=(
     "devops|${HOME}/repositorios/devops|/home/odoo/custom/devops|"
     "devops-it|${HOME}/repositorios/devops-it|/home/odoo/custom/devops-it|"
     "adhoc-way|${HOME}/repositorios/adhoc-way|/home/odoo/custom/adhoc-way|"
-    # oba y oba-project-memory quedan top-level sin prefijo (aunque son repos de
-    # la org ingadhoc/): todo dev OBA los necesita, no son opt-in (regla aflojada
-    # — ADR 0027). El PROYECTO es "oba" (mount custom/oba, clone ~/repositorios/oba);
+    # oba queda top-level sin prefijo (aunque es repo de la org ingadhoc/):
+    # todo dev OBA lo necesita, no es opt-in (regla aflojada — ADR 0027).
+    # El PROYECTO es "oba" (mount custom/oba, clone ~/repositorios/oba);
     # el REPO es oba-project — el sufijo -project es del repo, no del proyecto
-    # (ADR 0028 + 0039). oba = hub de specs/decisiones del producto OBA;
-    # oba-project-memory = wiki/memoria (su nombre de repo NO se acorta).
+    # (ADR 0028 + 0039). El digest (repo oba-project-memory) ya no se monta
+    # aparte: es un componente clonado ADENTRO del clone de oba (oba/digest/,
+    # gitignored en el hub), así que viaja con este mismo mount.
     "oba|${HOME}/repositorios/oba|/home/odoo/custom/oba||git@github.com:ingadhoc/oba-project.git"
-    "oba-project-memory|${HOME}/repositorios/oba-project-memory|/home/odoo/custom/oba-project-memory|"
     # Self-mount del propio docker-compose-odoo deshabilitado (mayo 2026):
     # cuando devops ya está mounteado, el bind anidado en
     # custom/devops/docker-compose-odoo aparece como dir dummy en lugar del

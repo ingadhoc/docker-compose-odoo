@@ -645,7 +645,6 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 #   ${HOME}/repositorios/devops/              → /home/odoo/custom/devops
 #   ${HOME}/repositorios/adhoc-way/           → /home/odoo/custom/adhoc-way
 #   ${HOME}/repositorios/oba/                 → /home/odoo/custom/oba
-#   ${HOME}/repositorios/oba-project-memory/  → /home/odoo/custom/oba-project-memory
 #   ${HOME}/repositorios/odumbo/              → /home/odoo/custom/odumbo
 #   ${HOME}/repositorios/consultoria-tecnica/ → /home/odoo/custom/consultoria-tecnica
 #
