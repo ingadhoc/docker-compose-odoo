@@ -36,6 +36,10 @@ El catálogo es config de **este** devcontainer (qué repos del ecosistema convi
 - `${HOME}/repositorios/odumbo/`              → `/home/odoo/custom/odumbo`
 - `${HOME}/repositorios/consultoria-tecnica/` → `/home/odoo/custom/consultoria-tecnica`
 
+Si un proyecto del catálogo no está clonado en el host, `discover-mounts.sh` lo clona (la URL viaja en el catálogo); si el clone falla, avisa y sigue sin ese mount.
+
+Algunos proyectos tienen **componentes**: repos que se clonan *adentro* del clone del proyecto y viajan con su mount, sin ser entrada propia del catálogo. Hoy hay uno — `oba/digest/` (repo `ingadhoc/oba-project-memory`, la wiki de módulos y productos), gitignoreado en el hub. `discover-mounts.sh` también lo clona si falta.
+
 Si tu repo del ecosistema vive en otro path (no-default) o querés mountear algo fuera del catálogo, usá `docker-compose.override.yml` (opt-in manual, gitignored).
 
 `poststart.sh` corre adentro del container y registra los proyectos mounteados buscando `custom/<proyecto>/AGENTS.md` para listarlos en `custom/workspace-map.md` (el `AGENTS.md` del workspace es la parte fija versionada en `oba-project`, symlinkeada por el mismo script). No ejecuta código del proyecto automáticamente.
