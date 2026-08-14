@@ -99,6 +99,35 @@ for entry in "${PROJECTS[@]}"; do
     fi
 done
 
+# Componentes: repos que se clonan ADENTRO del clone de un proyecto y viajan
+# con su mount (no son entradas propias del catálogo, no se montan aparte).
+# Formato: <proyecto>|<subpath>|<git_url>. Mismo criterio que el clone del
+# proyecto: si falta, se clona; si el clone falla, se avisa y se sigue — el
+# poststart vuelve a avisar adentro del container.
+COMPONENTS=(
+    "oba|digest|git@github.com:ingadhoc/oba-project-memory.git"
+)
+
+for entry in "${COMPONENTS[@]}"; do
+    IFS='|' read -r parent sub git_url <<<"$entry"
+    [[ -n "${PRESENT[$parent]:-}" ]] || continue
+    dest="${SOURCES[$parent]}/$sub"
+    # Solo cuenta como presente si es un clone. Un dir suelto (restos de la
+    # época en que el componente era contenido trackeado del hub) haría que
+    # esto no clonara nunca, en silencio.
+    [[ -d "$dest/.git" ]] && continue
+    if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null)" ]]; then
+        echo "discover-mounts: WARN — $parent/$sub existe y no es un clone; sacalo o cloná ahí $git_url" >&2
+        continue
+    fi
+    echo "discover-mounts: componente $parent/$sub no encontrado — clonando desde $git_url..." >&2
+    if git clone "$git_url" "$dest" >&2; then
+        echo "discover-mounts: $parent/$sub clonado OK → $dest" >&2
+    else
+        echo "discover-mounts: WARN — falló el clone de $parent/$sub (el proyecto se monta igual, sin ese componente)" >&2
+    fi
+done
+
 detected=()
 for entry in "${PROJECTS[@]}"; do
     IFS='|' read -r id host target req git_url <<<"$entry"
