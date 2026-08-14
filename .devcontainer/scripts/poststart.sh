@@ -156,6 +156,12 @@ MAPREPOS
     if [[ -f "$oba_custom_agents" ]]; then
         ln -s "$oba_custom_agents" "$CUSTOM/AGENTS.md"
         echo "AGENTS.md → $oba_custom_agents"
+        # El digest de oba es un componente clonado adentro (oba/digest/).
+        # Sin él, la wiki de módulos desaparece en silencio — avisar loud.
+        if [[ ! -f "$CUSTOM/oba/digest/README.md" ]]; then
+            echo "AVISO: oba montado SIN digest/ (la wiki de módulos). Es un componente:"
+            echo "       en el host, cloná ingadhoc/oba-project-memory en ~/repositorios/oba/digest"
+        fi
     else
         # Stub mínimo: apunta a la fuente en vez de duplicar su contenido.
         cat > "$CUSTOM/AGENTS.md" <<'STUB'
