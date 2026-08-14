@@ -25,7 +25,7 @@ devcontainer open ~/odoo/18
 
 ## Mounts auto-detectados de proyectos del ecosistema adhoc-way
 
-Los proyectos del ecosistema (`devops`, `adhoc-way`, `oba`, `oba-project-memory`, etc.) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
+Los proyectos del ecosistema (`devops`, `adhoc-way`, `oba`, etc.) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
 
 El catálogo es config de **este** devcontainer (qué repos del ecosistema conviene montar al lado) y vive hardcodeado en `discover-mounts.sh`. Convención de paths host por defecto:
 
@@ -33,7 +33,6 @@ El catálogo es config de **este** devcontainer (qué repos del ecosistema convi
 - `${HOME}/repositorios/devops-it/`           → `/home/odoo/custom/devops-it`
 - `${HOME}/repositorios/adhoc-way/`           → `/home/odoo/custom/adhoc-way`
 - `${HOME}/repositorios/oba/`                 → `/home/odoo/custom/oba`
-- `${HOME}/repositorios/oba-project-memory/`  → `/home/odoo/custom/oba-project-memory`
 - `${HOME}/repositorios/odumbo/`              → `/home/odoo/custom/odumbo`
 - `${HOME}/repositorios/consultoria-tecnica/` → `/home/odoo/custom/consultoria-tecnica`
 
