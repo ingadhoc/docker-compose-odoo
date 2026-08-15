@@ -156,22 +156,21 @@ MAPREPOS
     if [[ -f "$oba_custom_agents" ]]; then
         ln -s "$oba_custom_agents" "$CUSTOM/AGENTS.md"
         echo "AGENTS.md → $oba_custom_agents"
-        # El digest de oba es un componente clonado adentro (oba/digest/).
-        # Sin él, la wiki de módulos desaparece en silencio — avisar loud.
-        if [[ ! -f "$CUSTOM/oba/digest/README.md" ]]; then
-            echo "AVISO: oba montado SIN digest/ (la wiki de módulos). Es un componente:"
-            echo "       en el host, cloná ingadhoc/oba-project-memory en ~/repositorios/oba/digest"
-        fi
     else
-        # Dos motivos distintos para el stub, y el fix es distinto en cada uno:
-        # oba sin montar (cloná y rebuildeá) vs. oba montado con un clone viejo,
-        # anterior a que el archivo existiera (git pull). Decir "no está
-        # montado" cuando sí lo está manda al dev a hacer lo que ya hizo.
+        # Tres motivos distintos para el stub, con tres fixes distintos. El
+        # estado de oba sale de los mapas que ya armó el loop de arriba: un
+        # `-d custom/oba` a secas da true también para un mountpoint vacío
+        # (bind sacado o renombrado en el host), y ahí mandaríamos al dev a
+        # hacer `git pull` sobre un path que no existe.
         local stub_por
-        if [[ -d "$CUSTOM/oba" ]]; then
+        if [[ -n "${projects[oba]:-}" ]]; then
             stub_por="el clone montado en \`custom/oba\` todavía no tiene ese archivo:
 actualizalo (\`git pull\` en \`~/repositorios/oba\`) y rebuildeá."
             echo "AVISO: oba montado pero sin workspace/custom-AGENTS.md (clone viejo) — AGENTS.md stub generado."
+        elif [[ -n "${stale_mounts[oba]:-}" ]]; then
+            stub_por="\`custom/oba\` es un mountpoint vacío: el clone del host
+desapareció o cambió de nombre. Verificá \`~/repositorios/oba\` y rebuildeá."
+            echo "AVISO: custom/oba vacío (mount stale) — AGENTS.md stub generado."
         else
             stub_por="el proyecto \`oba\` no está montado: clonalo en
 \`~/repositorios/oba\` y rebuildeá (\`discover-mounts.sh\` lo detecta solo)."
@@ -187,6 +186,15 @@ La parte fija de este AGENTS.md vive versionada en \`ingadhoc/oba-project\`
 Los listados del workspace (proyectos del ecosistema montados, otros repos
 en \`custom/\`, repos del dev) están en [\`workspace-map.md\`](./workspace-map.md).
 STUB
+    fi
+
+    # El digest de oba es un componente clonado adentro (oba/digest/). Sin él,
+    # la wiki de módulos desaparece en silencio — avisar loud. Va afuera del if
+    # de arriba: es ortogonal al AGENTS.md, y un clone viejo sin digest también
+    # tiene que verlo.
+    if [[ -n "${projects[oba]:-}" ]] && [[ ! -f "$CUSTOM/oba/digest/README.md" ]]; then
+        echo "AVISO: oba montado SIN digest/ (la wiki de módulos). Es un componente:"
+        echo "       en el host, cloná ingadhoc/oba-project-memory en ~/repositorios/oba/digest"
     fi
 
     cat > "$CUSTOM/CLAUDE.md" <<'EOF'
