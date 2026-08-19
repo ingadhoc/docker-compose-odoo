@@ -68,6 +68,7 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         sed_inplace "s|\"AD_DEV_MODE\": \"NORMAL\"|\"AD_DEV_MODE\": \"MASTER\"|g" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
         sed_inplace 's/"localRoot": "\${workspaceFolder}",/"localRoot": "${workspaceFolder}\/repositories",/' $SCRIPT_DIR/.devcontainer/.vscode/launch.json
         sed_inplace "s/ipv4_address:.*/ipv4_address: 172.60.0.99/" "$SCRIPT_DIR/docker-compose.yml"
+        sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.dev/" "$SCRIPT_DIR/.env"
     fi
 
     if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] && [[ "$ODOO_V" -le "17" ]]; then
