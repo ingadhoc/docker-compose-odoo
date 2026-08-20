@@ -77,6 +77,13 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         perl -0777 -i -pe 's/"editor.codeActionsOnSave":\s*\{.*?\},/"editor.codeActionsOnSave": {"source.fixAll": "never", "source.organizeImports": "never"},/sg' "$SCRIPT_DIR/.devcontainer/devcontainer.json"
     fi
 
+    # Transition to Odoo 20
+    if [[ "$ODOO_V" == "20" ]]; then
+        echo "Transitioning to Odoo 20"
+        sed_inplace "s/^IGNORE_SRC_REPOSITORIES=.*/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
+        sed_inplace "s/^SERVER_WIDE_MODULES=.*/SERVER_WIDE_MODULES=/" "$SCRIPT_DIR/.env"
+    fi
+
     echo "Pull latest image"
     source "$SCRIPT_DIR/.env"
     if [[ "$OSTYPE" == "darwin"* ]] && [[ "$(uname -m)" == "arm64" ]]; then
