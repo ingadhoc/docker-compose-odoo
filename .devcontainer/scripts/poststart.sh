@@ -319,7 +319,24 @@ install_cli_if_missing() {
 }
 install_cli_if_missing claude @anthropic-ai/claude-code
 install_cli_if_missing codex @openai/codex
-install_cli_if_missing gemini @google/gemini-cli
+# Antigravity CLI (binario `agy`, no está en npm). Reemplaza a @google/gemini-cli, que
+# desde 2026-08 devuelve IneligibleTierError con cuenta individual y remite acá.
+# El éxito se verifica por el binario y no por el exit code: `curl | bash` devuelve el
+# del bash, que sale 0 con stdin vacío si el download falla.
+# Transitorio pre-bake OCI: el installer lo deja en ~/.local/bin, que no persiste
+# rebuilds. Cuando la imagen lo traiga (adhoc-cicd/oci-odoo-by-adhoc#54) el guard lo
+# encuentra en /usr/local/bin y este bloque se puede sacar.
+if ! command -v agy &>/dev/null; then
+    echo "Instalando Antigravity CLI..."
+    curl -fsSL https://antigravity.google/cli/install.sh | bash > /tmp/agy-install.log 2>&1
+    if command -v agy &>/dev/null; then
+        echo "agy instalado ($(command -v agy), $(agy --version 2>/dev/null || echo '?'))."
+    else
+        echo "FALLO: no se pudo instalar Antigravity CLI (ver /tmp/agy-install.log)"
+    fi
+else
+    echo "agy ya presente ($(command -v agy))."
+fi
 # OpenCode (sst/opencode) — runtime CLI alternativo a Claude Code y Codex.
 # Se mantiene en el devcontainer para que el dev pueda elegir agente.
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
