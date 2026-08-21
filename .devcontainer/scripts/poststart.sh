@@ -539,6 +539,14 @@ INGADHOC_SKILLS=(
     "odoo-translator"
     "odoo-upgrade-migration"
     "odoo-upgrade-lines"        # Upgrade Lines (saas_provider_upgrade) — task 69549
+    # Cadena de migración actua-20 (task 72749) — viven en odoo/modules/upgrades/
+    # del catálogo; la instalación resuelve por nombre, así que los moves de
+    # carpeta no rompen. odoo-code-migration-batch necesita más de una versión a
+    # la vez (su flujo completo corre en el host), pero se instala igual por
+    # paridad de catálogo.
+    "odoo-module-code-migration"
+    "odoo-code-migration-batch"
+    "odoo-upgrade-declarative-checks"
     "odoo-test-from-commit"
     "odoo-test-from-video"
     "odoo-module-generator"
