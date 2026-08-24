@@ -324,6 +324,73 @@ install_cli_if_missing gemini @google/gemini-cli
 # Se mantiene en el devcontainer para que el dev pueda elegir agente.
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
 install_cli_if_missing opencode opencode-ai
+
+# Sandbox de codex — shim al backend Landlock cuando bubblewrap no puede.
+#
+# Desde 0.147 codex sandboxea con bubblewrap (lo vendorea en su paquete npm) en
+# TODOS los modos, incluido read-only. bwrap necesita crear un user namespace y
+# el perfil seccomp default de Docker lo bloquea: adentro del container codex no
+# ejecuta ni un comando, o sea que tampoco lee archivos. Landlock no necesita
+# namespaces y sigue enforceando read-only, así que el shim fuerza ese backend.
+#
+# Se autodesactiva: probamos el bwrap vendoreado y si funciona borramos el shim.
+# Limitación conocida — Landlock solo soporta `-s read-only`; con
+# `-s workspace-write` codex panickea (feature deprecada aguas arriba).
+#
+# El flag tiene fecha: 0.149.1 ya avisa en runtime que `use_legacy_landlock` se
+# elimina pronto. Cuando pase, el `-c` queda como clave desconocida y codex
+# vuelve a bubblewrap — o sea al estado roto de hoy, no a algo peor, y el probe
+# de arriba no lo detecta porque mira bwrap y no el flag. El fix durable es otro:
+# que el container gane el permiso de seccomp (descartado: hacen falta también
+# apparmor y SYS_ADMIN, casi privilegiado), que codex arregle su backend, o correr
+# codex en un container hermano sin credenciales montadas.
+CODEX_SHIM="$HOME/.local/bin/codex"
+CODEX_SHIM_MARK="# adhoc: codex landlock shim"
+
+codex_real_bin() {
+    local c
+    for c in "$HOME/.local/bin/codex" /usr/local/bin/codex /usr/bin/codex; do
+        [ -x "$c" ] || continue
+        grep -q "$CODEX_SHIM_MARK" "$c" 2>/dev/null && continue
+        echo "$c"
+        return 0
+    done
+    return 1
+}
+
+drop_codex_shim() {
+    if [ -f "$CODEX_SHIM" ] && grep -q "$CODEX_SHIM_MARK" "$CODEX_SHIM"; then
+        rm -f "$CODEX_SHIM"
+        echo "codex: sandbox nativo OK, shim de Landlock removido."
+    fi
+}
+
+ensure_codex_landlock_shim() {
+    local real pkg bw
+    real="$(codex_real_bin)" || return 0
+    if [ "$real" = "$CODEX_SHIM" ]; then
+        echo "codex: instalado en $CODEX_SHIM, no puedo shimearlo ahí." \
+             "Si el sandbox falla: codex -c features.use_legacy_landlock=true"
+        return 0
+    fi
+    pkg="$(readlink -f "$real")"
+    pkg="${pkg%/bin/*}"
+    bw="$(find "$pkg" -type f -name bwrap -perm -u+x 2>/dev/null | head -1)"
+    if [ -z "$bw" ] || "$bw" --dev-bind / / --proc /proc true 2>/dev/null; then
+        drop_codex_shim
+        return 0
+    fi
+    mkdir -p "$(dirname "$CODEX_SHIM")"
+    cat > "$CODEX_SHIM" <<SHIM
+#!/bin/bash
+$CODEX_SHIM_MARK — bwrap no puede crear user namespaces en el devcontainer.
+# Lo instala el poststart; para saltearlo, invocar $real directo.
+exec "$real" -c features.use_legacy_landlock=true "\$@"
+SHIM
+    chmod +x "$CODEX_SHIM"
+    echo "codex: bwrap no puede crear namespaces, shim de Landlock instalado en $CODEX_SHIM."
+}
+ensure_codex_landlock_shim
 # Auth de git hacia GitHub — fallback a HTTPS cuando no hay clave SSH.
 #
 # VS Code copia el `~/.gitconfig` del host al crear el container (no lo
