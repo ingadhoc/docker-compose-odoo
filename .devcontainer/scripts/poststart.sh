@@ -605,7 +605,8 @@ INGADHOC_SKILLS=(
     "odoo-review"               # antes: odoo-code-review (rota silenciosa)
     "odoo-translator"
     "odoo-upgrade-migration"
-    "odoo-upgrade-lines"        # Upgrade Lines (saas_provider_upgrade) — task 69549
+    # odoo-upgrade-lines se mudó al workspace Tuqui (skill MCP, multi-plataforma):
+    # cargar con skill_detail(name='odoo-upgrade-lines') — ingadhoc/skills#90
     # Cadena de migración actua-20 (task 72749) — viven en odoo/modules/upgrades/
     # del catálogo; la instalación resuelve por nombre, así que los moves de
     # carpeta no rompen. odoo-code-migration-batch necesita más de una versión a
