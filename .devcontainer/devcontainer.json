@@ -27,7 +27,12 @@
 
   "shutdownAction": "stopCompose",
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
-  "postStartCommand": "/scripts/share-claude-sessions.sh > /tmp/postStartCommand.log 2>&1",
+  "postStartCommand": {
+    "claude-sessions": "/scripts/share-claude-sessions.sh > /tmp/postStartCommand.log 2>&1",
+    // Watchdog de memoria de los language servers. Detached — no bloquea
+    // el arranque del container. Ver doc/memoria.md.
+    "ls-watchdog": "setsid nohup /scripts/ls-watchdog.sh </dev/null >/dev/null 2>&1 & true"
+  },
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user",
