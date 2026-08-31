@@ -17,6 +17,40 @@ cd ctx
 ./init.sh
 ```
 
+## PostgreSQL
+
+Desde Odoo 20, cada versión corre contra el mismo major de PostgreSQL que usa en
+producción. `init.sh` resuelve el major desde el nombre del directorio, escribe
+`ODOO_PGHOST` en el `.env` y levanta esa instancia en el repo de context.
+
+| Odoo | PG | `ODOO_PGHOST` | Puerto en el host |
+| --- | --- | --- | --- |
+| hasta 19 | 15 | `db` | 5432 |
+| 20, master | 17 | `db17` | 5417 |
+
+Las versiones anteriores a la 20 **no cambian**: siguen en el `db` compartido de
+siempre, que es al que ya apuntan. La alineación arranca en la 20 a propósito —
+retrofitear las viejas obligaría a mudar bases que ya funcionan, sin ganar nada.
+
+Se llama `ODOO_PGHOST` y no `PGHOST` porque un `PGHOST` exportado en el shell del
+dev (variable estándar de libpq) le gana al `.env` en la interpolación de compose
+y mandaría el container a otro lado en silencio. Adentro del container la
+variable llega igual como `PGHOST`.
+
+Si el context no está en `~/odoo/ctx`, pasale el path: `CTX_DIR=/otro/path ./init.sh`.
+
+Necesitás el repo de context actualizado — el service `db17` se agregó ahí. Si
+`init.sh` no puede levantar la instancia corta con error, en vez de dejarte un
+Odoo apuntando a un host que no existe; si corrés tu propio PostgreSQL,
+`SKIP_CTX_PG=1 ./init.sh` no toca el `ODOO_PGHOST` del `.env` ni levanta nada.
+
+Las instancias conviven, así que podés tener varias versiones levantadas a la
+vez. Lo que **no** viaja entre majors son las bases: cada instancia tiene su
+propio datadir. Las bases del `db` no se ven desde la 20 — no se tocan, siguen
+ahí y en el puerto 5432, pero para usarlas del otro lado hay que mudarlas con
+`pg_dump` / `pg_restore`. El detalle está en el
+[readme del context](https://github.com/ingadhoc/docker-compose-context#postgresql-por-versión-de-odoo).
+
 ## Start devcontainer
 
 ```sh
