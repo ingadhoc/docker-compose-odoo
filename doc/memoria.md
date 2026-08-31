@@ -41,6 +41,12 @@ máquinas. Soporta cgroup v2 (`memory.current` / `memory.max`) y v1
 (`memory/memory.usage_in_bytes` / `memory.limit_in_bytes`); si no puede
 leer ninguno, lo dice en el log y sale en vez de quedarse mudo.
 
+El `sleep 2` del hook en `devcontainer.json` no es cosmético. El exec del
+devcontainer corre con TTY y lo desarma apenas retorna el último comando; sin
+esa pausa el proceso en background no llega a ejecutarse y el watchdog nunca
+arranca — silenciosamente, porque el hook igual reporta éxito. Verificado:
+con TTY y sin pausa no arranca; con TTY y `sleep 1` arranca y sobrevive.
+
 Log en `/tmp/ls-watchdog.log`:
 
 ```
@@ -104,16 +110,39 @@ thrashing.
 cuando la RAM libre baja de un umbral, antes de que el kernel empiece a
 paginar. En Debian/Ubuntu: `sudo apt install earlyoom`.
 
-Dos detalles que hacen la diferencia entre que sirva y que no:
+Tres detalles que hacen la diferencia entre que sirva y que no. Los tres
+salen de correrlo cuatro días en una workstation real:
 
-- **`-s 100`.** Por default earlyoom actúa solo si RAM *y* swap están
-  ambos bajo el umbral. En una máquina con swap grande esa condición no
-  se cumple antes del thrashing, así que nunca dispara. `-s 100` le dice
-  que decida solo por RAM disponible.
-- **`--avoid` para el navegador.** Si no, matás Chrome y no el language
-  server de 7 GB. El regex matchea contra `/proc/PID/comm`, no contra el
-  cmdline.
+- **`-s 100`.** Por default earlyoom actúa solo si RAM *y* swap están ambos
+  bajo el umbral. En una máquina con swap grande esa condición no se cumple
+  antes del thrashing, así que nunca dispara. `-s 100` le dice que decida
+  solo por RAM disponible.
+- **`--avoid` con los procesos de contenido del navegador, no solo el
+  principal.** El regex matchea contra `/proc/PID/comm` truncado a 15 chars,
+  **no** contra el cmdline. Los procesos de contenido de Firefox no se llaman
+  `firefox`: son `Isolated Web Co`, `Web Content`, `Privileged Cont`. Una
+  lista que solo tenga `firefox|firefox-bin` los deja desprotegidos.
+- **`--prefer` para el language server.** Podría parecer redundante — el
+  `oom_score` ya crece con el consumo — pero no lo es: los navegadores se
+  auto-asignan `oom_score_adj` alto (Chrome 100-300, Firefox 200) y eso pesa
+  más que varios GB de RSS. Medido: un `Web Content` de 70 MiB puntuó 822
+  mientras un `odoo_ls_server` de 9952 MiB puntuaba 814. Sin `--prefer`,
+  earlyoom elige la pestaña de 70 MiB, no libera nada y vuelve a disparar en
+  cascada.
+
+`odoo_ls_server` sí va en `--prefer`; Pylance no, aunque también crezca: su
+`comm` es `MainThread`, que comparte con el server de VS Code y los extension
+hosts, y darle prioridad arriesga matar la sesión remota. A Pylance lo cubre
+el watchdog del devcontainer, que lo identifica por cmdline.
 
 ```
-EARLYOOM_ARGS="-m 12,6 -s 100 -r 300 --avoid '^(chrome|chrome_crashpad|firefox|firefox-bin|code|Xorg|gnome-shell|systemd|sshd|dockerd|containerd|postgres)$'"
+EARLYOOM_ARGS="-m 12,6 -s 100 -r 300 --prefer '^odoo_ls_server$' --avoid '^(chrome|chrome_crashpad|firefox|firefox-bin|Isolated.Web.Co|Isolated.Servic|Web.Content|Privileged.Cont|WebExtensions|RDD.Process|Utility.Process|Socket.Process|code|Xorg|gnome-shell|systemd|sshd|dockerd|containerd|postgres)$'"
+```
+
+Los puntos reemplazan espacios para no depender de cómo systemd parsea las
+comillas del `EnvironmentFile`. Después de aplicar, conviene confirmar que los
+argumentos expandieron en un solo argv:
+
+```bash
+tr '\0' '\n' < /proc/$(systemctl show earlyoom -p MainPID --value)/cmdline
 ```

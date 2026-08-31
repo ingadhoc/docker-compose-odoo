@@ -29,9 +29,11 @@
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
   "postStartCommand": {
     "claude-sessions": "/scripts/share-claude-sessions.sh > /tmp/postStartCommand.log 2>&1",
-    // Watchdog de memoria de los language servers. Detached — no bloquea
-    // el arranque del container. Ver doc/memoria.md.
-    "ls-watchdog": "setsid nohup /scripts/ls-watchdog.sh </dev/null >/dev/null 2>&1 & true"
+    // Watchdog de memoria de los language servers. El `sleep 2` no es
+    // cosmético: el exec del devcontainer corre con TTY y lo desarma apenas
+    // retorna el último comando, antes de que el hijo en background llegue a
+    // ejecutarse. Sin esa pausa el watchdog nunca arranca. Ver doc/memoria.md.
+    "ls-watchdog": "setsid nohup /scripts/ls-watchdog.sh </dev/null >/dev/null 2>&1 & sleep 2"
   },
   "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
