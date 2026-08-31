@@ -201,21 +201,28 @@ STUB
     # el agente carga solo (los AGENTS.md de los proyectos montados son
     # carpetas hermanas y no se inyectan), así que si acá solo dice "ver
     # AGENTS.md" el ruteo por tema no llega a ocurrir.
+    #
+    # Pide UN archivo, no dos: el AGENTS.md es lectura irreducible (son las
+    # instrucciones del workspace) y adentro está el ruteo, que decide si hace
+    # falta el mapa. Exigir workspace-map.md acá le cobraba esa lectura al caso
+    # default, que es justo el que el ruteo declara exento — detectado por el
+    # eval OBA-E12 de oba-project.
     cat > "$CUSTOM/CLAUDE.md" <<'EOF'
 # CLAUDE.md
 **Antes de responder el primer mensaje de esta sesión, leé
-[`AGENTS.md`](./AGENTS.md) y [`workspace-map.md`](./workspace-map.md) con la
-tool Read** — traen el ruteo por tema del workspace: qué proyectos están
-montados acá y cuál `AGENTS.md` hay que leer según de qué trate el pedido.
-`AGENTS.md` es la fuente canónica de instrucciones de este workspace.
+[`AGENTS.md`](./AGENTS.md) con la tool Read** — es la fuente canónica de
+instrucciones de este workspace, y trae el ruteo por tema: cuándo el pedido se
+contesta acá mismo y cuándo hay que ir a leer el `AGENTS.md` de otro proyecto
+montado. No adelantes otras lecturas: el ruteo dice qué hace falta según el
+pedido.
 EOF
     cat > "$CUSTOM/GEMINI.md" <<'EOF'
 # GEMINI.md
 **Antes de responder el primer mensaje de esta sesión, leé
-[`AGENTS.md`](./AGENTS.md) y [`workspace-map.md`](./workspace-map.md)** —
-traen el ruteo por tema del workspace: qué proyectos están montados acá y
-cuál `AGENTS.md` hay que leer según de qué trate el pedido.
-`AGENTS.md` es la fuente canónica de instrucciones de este workspace.
+[`AGENTS.md`](./AGENTS.md)** — es la fuente canónica de instrucciones de este
+workspace, y trae el ruteo por tema: cuándo el pedido se contesta acá mismo y
+cuándo hay que ir a leer el `AGENTS.md` de otro proyecto montado. No adelantes
+otras lecturas: el ruteo dice qué hace falta según el pedido.
 EOF
 
     echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
