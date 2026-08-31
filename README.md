@@ -17,6 +17,40 @@ cd ctx
 ./init.sh
 ```
 
+## PostgreSQL
+
+Cada versión de Odoo corre contra el mismo major de PostgreSQL que usa en
+producción. `init.sh` resuelve el major desde el nombre del directorio, escribe
+`ODOO_PGHOST` en el `.env` y levanta esa instancia en el repo de context
+(`ODOO_PGHOST` y no `PGHOST` porque un `PGHOST` exportado en el shell del dev le
+gana al `.env` en la interpolación de compose):
+
+| Odoo | PG | `ODOO_PGHOST` | Puerto en el host |
+| --- | --- | --- | --- |
+| 13, 15 | 13 | `db13` | 5413 |
+| 16 | 14 | `db14` | 5414 |
+| 17, 18 | 15 | `db` | 5432 |
+| 19, 20, master | 17 | `db17` | 5417 |
+
+Una versión no listada se resuelve por número: de 19 en adelante sigue el mapeo
+más nuevo (PG 17), y una anterior se queda en el `db` compartido, que es el que
+ya usa hoy.
+
+Si el context no está en `~/odoo/ctx`, pasale el path: `CTX_DIR=/otro/path ./init.sh`.
+
+Necesitás el repo de context actualizado — los services por major se agregaron
+ahí. Si `init.sh` no puede levantar la instancia corta con error, en vez de
+dejarte un Odoo apuntando a un host que no existe; si corrés tu propio
+PostgreSQL, `SKIP_CTX_PG=1 ./init.sh` no toca el `ODOO_PGHOST` del `.env` ni
+levanta nada.
+
+Las instancias conviven, así que podés tener varias versiones de Odoo levantadas
+a la vez. Lo que **no** viaja entre majors son las bases: cada instancia tiene su
+propio datadir. Si venís de una versión que apuntaba a otro major, las bases
+viejas siguen intactas en la instancia anterior pero no las ves desde Odoo — hay
+que mudarlas con `pg_dump` / `pg_restore`. El detalle está en el
+[readme del context](https://github.com/ingadhoc/docker-compose-context#postgresql-por-versión-de-odoo).
+
 ## Start devcontainer
 
 ```sh

@@ -49,6 +49,18 @@ else
     }
 fi
 
+# PostgreSQL major used by each Odoo version, same map as production.
+pg_major_for() {
+    case "$1" in
+        13|15) echo 13 ;;
+        16)    echo 14 ;;
+        17|18) echo 15 ;;
+        19|20) echo 17 ;;
+        # Newer versions follow the latest mapping, older ones keep PG 15.
+        *) if [[ "$1" =~ ^[0-9]+$ ]] && [[ "$((10#$1))" -lt 19 ]]; then echo 15; else echo 17; fi ;;
+    esac
+}
+
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     # Check if "ODOO_V" is 2 digits or "master"
     if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] || [[ "$ODOO_V" == "master" ]]; then
@@ -57,6 +69,16 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         sed_inplace "s/^ODOO_VERSION=.*/ODOO_VERSION=$ODOO_V/" "$SCRIPT_DIR/.env"
         if ! grep -qE "^ODOO_MINOR=${ODOO_V}\." "$SCRIPT_DIR/.env"; then
             sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
+        fi
+
+        if [[ -n "$SKIP_CTX_PG" ]]; then
+            echo "SKIP_CTX_PG set, leaving ODOO_PGHOST untouched"
+        else
+            PG_MAJOR=$(pg_major_for "$ODOO_V")
+            PG_SERVICE="db${PG_MAJOR}"
+            # PG 15 is the context's original `db`, kept under that name.
+            [[ "$PG_MAJOR" == "15" ]] && PG_SERVICE="db"
+            echo "Odoo $ODOO_V uses PostgreSQL $PG_MAJOR ($PG_SERVICE)"
         fi
     fi
 
@@ -92,6 +114,29 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         docker pull ${ODOO_IMAGE}:${ODOO_MINOR}
     fi
 
+fi
+
+# PostgreSQL instance lives in the context repo, one per major. See README.
+# Stops here on failure, before the steps that recreate the Odoo container.
+if [[ -n "$PG_SERVICE" ]]; then
+    CTX_DIR="${CTX_DIR:-$(dirname "$SCRIPT_DIR")/ctx}"
+    if [[ ! -d "$CTX_DIR" ]]; then
+        echo "ERROR: no context repo at $CTX_DIR. Set CTX_DIR if it lives elsewhere."
+        exit 1
+    fi
+    echo "Starting $PG_SERVICE in the context repo ($CTX_DIR)"
+    if ! ( cd "$CTX_DIR" && docker compose --profile "pg${PG_MAJOR}" up -d "$PG_SERVICE" ); then
+        echo "ERROR: could not start $PG_SERVICE. Update the context repo (git pull) and rerun,"
+        echo "       or set SKIP_CTX_PG=1 if you run PostgreSQL yourself."
+        exit 1
+    fi
+    # Claimed only now, so a failure above leaves the .env untouched.
+    # Namespaced so an exported libpq PGHOST cannot shadow it in compose.
+    if grep -q "^ODOO_PGHOST=" "$SCRIPT_DIR/.env"; then
+        sed_inplace "s/^ODOO_PGHOST=.*/ODOO_PGHOST=$PG_SERVICE/" "$SCRIPT_DIR/.env"
+    else
+        printf '\nODOO_PGHOST=%s\n' "$PG_SERVICE" >> "$SCRIPT_DIR/.env"
+    fi
 fi
 
 # Auth + estado de CLIs de agentes — setup del "hop" dir local al repo
