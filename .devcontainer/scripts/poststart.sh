@@ -197,13 +197,25 @@ STUB
         echo "       en el host, cloná ingadhoc/oba-project-memory en ~/repositorios/oba/digest"
     fi
 
+    # Imperativo, no un puntero pasivo: es el único archivo del workspace que
+    # el agente carga solo (los AGENTS.md de los proyectos montados son
+    # carpetas hermanas y no se inyectan), así que si acá solo dice "ver
+    # AGENTS.md" el ruteo por tema no llega a ocurrir.
     cat > "$CUSTOM/CLAUDE.md" <<'EOF'
 # CLAUDE.md
-Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+**Antes de responder el primer mensaje de esta sesión, leé
+[`AGENTS.md`](./AGENTS.md) y [`workspace-map.md`](./workspace-map.md) con la
+tool Read** — traen el ruteo por tema del workspace: qué proyectos están
+montados acá y cuál `AGENTS.md` hay que leer según de qué trate el pedido.
+`AGENTS.md` es la fuente canónica de instrucciones de este workspace.
 EOF
     cat > "$CUSTOM/GEMINI.md" <<'EOF'
 # GEMINI.md
-Ver **[`AGENTS.md`](./AGENTS.md)** — fuente canónica de instrucciones para este workspace.
+**Antes de responder el primer mensaje de esta sesión, leé
+[`AGENTS.md`](./AGENTS.md) y [`workspace-map.md`](./workspace-map.md)** —
+traen el ruteo por tema del workspace: qué proyectos están montados acá y
+cuál `AGENTS.md` hay que leer según de qué trate el pedido.
+`AGENTS.md` es la fuente canónica de instrucciones de este workspace.
 EOF
 
     echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
