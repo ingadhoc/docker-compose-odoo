@@ -617,6 +617,7 @@ INGADHOC_SKILLS=(
     "odoo-upgrade-declarative-checks"
     "odoo-test-from-commit"
     "odoo-test-from-video"
+    "oba-test"                  # gap de tests OBA (odoo/testing/oba-test)
     "odoo-module-generator"
     "odoo-auto-readme"          # antes: odoo-readme (rota silenciosa)
     "odoo-commit-explainer"     # mensajes de commit Odoo-style
