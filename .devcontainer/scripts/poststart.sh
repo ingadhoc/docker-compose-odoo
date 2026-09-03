@@ -809,15 +809,36 @@ for_each_mounted_project() {
 }
 for_each_mounted_project
 
-# Symlink de reglas Claude Code desde proyecto oba mounteado
-OBA_REVIEW_RULE="$HOME/custom/oba/review/odoo-adhoc.md"
+# Reglas Claude Code desde proyecto oba mounteado.
+#
+# COPIA, no symlink: el cargador de `.claude/rules/` recorre el directorio por
+# su cuenta y NO resuelve las entradas que son symlink — las saltea sin error.
+# Verificado con una regla de prueba idéntica en las dos formas (misma carpeta,
+# mismo cwd, Claude Code 2.1.258): como archivo real entra en contexto, como
+# symlink no, sea el target absoluto o relativo. `custom/AGENTS.md` sigue siendo
+# symlink porque a ese lo abre el agente con un Read normal, que sí lo resuelve.
+#
+# El dir se regenera en cada postCreate (ver el `rm -rf $HOME/custom/.claude`
+# del bloque de limpieza), así que la copia no se pudre entre rebuilds.
+#
+# Recorre toda la carpeta en vez de nombrar un archivo: `oba/review/` es la
+# fuente única declarada de estas reglas, y una regla nueva no debería requerir
+# un PR acá. README.md queda afuera a propósito — documenta la carpeta, no es
+# una regla, y al no tener frontmatter `paths:` entraría en TODAS las sesiones.
+OBA_REVIEW_DIR="$HOME/custom/oba/review"
 CLAUDE_RULES_DIR="$HOME/custom/.claude/rules"
-if [[ -f "$OBA_REVIEW_RULE" ]]; then
+if [[ -d "$OBA_REVIEW_DIR" ]]; then
     mkdir -p "$CLAUDE_RULES_DIR"
-    ln -sf "$OBA_REVIEW_RULE" "$CLAUDE_RULES_DIR/odoo-adhoc.md"
-    echo "Symlink creado: $CLAUDE_RULES_DIR/odoo-adhoc.md → $OBA_REVIEW_RULE"
+    rules_copiadas=0
+    for rule in "$OBA_REVIEW_DIR"/*.md; do
+        [[ -f "$rule" ]] || continue
+        [[ "$(basename "$rule")" == "README.md" ]] && continue
+        cp "$rule" "$CLAUDE_RULES_DIR/"
+        rules_copiadas=$((rules_copiadas + 1))
+    done
+    echo "Rules copiadas a $CLAUDE_RULES_DIR: $rules_copiadas desde $OBA_REVIEW_DIR"
 else
-    echo "oba no mounteado o review/odoo-adhoc.md no existe — skip symlink rules."
+    echo "oba no mounteado o review/ no existe — skip rules."
 fi
 
 # Allow-list base de Claude Code (operaciones read-only) — reduce prompts
