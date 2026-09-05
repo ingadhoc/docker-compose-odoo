@@ -639,7 +639,10 @@ INGADHOC_SKILLS=(
     "odoo-module-generator"
     "odoo-auto-readme"          # antes: odoo-readme (rota silenciosa)
     "odoo-commit-explainer"     # mensajes de commit Odoo-style
-    "odoo-video-to-docs"        # docs desde video — alto uso real (Academy)
+    # odoo-video-to-docs se retira del catálogo (ingadhoc/skills#96): su flujo
+    # dependía de un script de capturas que quedó vacío. El reemplazo es
+    # odoo-screenshots, que vive en adhoc-way/knowledge-management-project y
+    # no se instala desde este catálogo.
     # SDD / specs
     "product-sdd"
     # General
