@@ -663,17 +663,23 @@ else
     echo "Installing odoo skills in $PWD"
     LOG_FILE="$PWD/install_skill.log"
     install_failed=0
+    list_stale=0
 
     # Validación pre-install: confirmar que cada skill de INGADHOC_SKILLS exista
-    # en el catálogo vivo. Cuando se modifica el catálogo (rename, move) y este
-    # array no se sincroniza, npx skills add falla silencioso. El script
-    # validate-skill-list.sh del propio catálogo detecta el drift loud.
+    # en el catálogo vivo. Cuando se modifica el catálogo (rename, move, baja) y
+    # este array no se sincroniza, `npx skills add` ignora el nombre que sobra
+    # sin decir nada y sale 0: instala el resto y la skill que falta no aparece
+    # nunca. El script validate-skill-list.sh del propio catálogo hace visible
+    # ese desvío.
     # Origen: adhoc-way spec 0014 (política-skills-y-flujo-contributor), Eje 2.
+    #
+    # La lista vieja NO es un fallo de instalación: se reporta aparte
+    # (list_stale) para no disparar el "no se pudieron instalar las skills"
+    # cuando en realidad se instalaron todas menos la que ya no existe.
     VALIDATE_DIR=$(mktemp -d)
     if git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$VALIDATE_DIR" 2>/dev/null; then
         if ! bash "$VALIDATE_DIR/scripts/validate-skill-list.sh" "${INGADHOC_SKILLS[@]}"; then
-            echo "FALLO: validación de INGADHOC_SKILLS contra catálogo. Revisá nombres en este script." >&2
-            install_failed=1
+            list_stale=1
         fi
         rm -rf "$VALIDATE_DIR"
     else
@@ -707,6 +713,11 @@ else
     else
         echo "FALLO: no se pudieron instalar las skills. Mostrando últimas líneas del log de instalación:"
         tail -n 200 "$LOG_FILE" || true
+    fi
+
+    if [ "$list_stale" -ne 0 ]; then
+        echo "AVISO: la lista INGADHOC_SKILLS de este script nombra skills que ya no están en el catálogo (ver MISSING arriba)." >&2
+        echo "       El resto se instaló igual; esas no. Sacalas del array por PR a ingadhoc/docker-compose-odoo." >&2
     fi
 
     rm "$LOG_FILE" || true
