@@ -118,13 +118,17 @@ if [[ -n "$PG_SERVICE" ]]; then
         exit 1
     fi
     # Docker would create a missing datadir as root, and postgres runs as uid 26.
-    PG_DATADIR=$(cd "$CTX_DIR" && docker compose --profile "pg${PG_MAJOR}" config --format json 2>/dev/null \
-        | jq -r ".services.\"$PG_SERVICE\".volumes[0].source // empty")
+    PG_CONFIG=$(cd "$CTX_DIR" && docker compose --profile "pg${PG_MAJOR}" config --format json 2>/dev/null)
+    PG_DATADIR=$(echo "$PG_CONFIG" | jq -r ".services.\"$PG_SERVICE\".volumes[0].source // empty")
+    PG_IMAGE=$(echo "$PG_CONFIG" | jq -r ".services.\"$PG_SERVICE\".image // empty")
     if [[ -n "$PG_DATADIR" ]] && [[ ! -d "$PG_DATADIR" ]]; then
         echo "Creating datadir $PG_DATADIR"
         mkdir -p "$PG_DATADIR"
-        if [[ "$OSTYPE" != "darwin"* ]]; then
-            sudo chown 26:102 "$PG_DATADIR"
+        # Owner set from a root container, so this needs no sudo on the host.
+        if [[ "$OSTYPE" != "darwin"* ]] && ! docker run --rm --user 0 \
+            -v "$PG_DATADIR":/pgdata "$PG_IMAGE" chown 26:102 /pgdata; then
+            echo "ERROR: could not set the owner of $PG_DATADIR to 26:102."
+            exit 1
         fi
     fi
 
