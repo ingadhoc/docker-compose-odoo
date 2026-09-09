@@ -60,6 +60,7 @@ services:
         #!/bin/bash
         # pip install --user --no-cache-dir -e /home/odoo/custom/odoo
         # pip install --user --no-cache-dir pyopenssl
+      PGHOST: ${ODOO_PGHOST:-db}
       SMTP_SERVER: mailhog
       SMTP_PORT: 1025
       DBFILTER: ${DBFILTER}

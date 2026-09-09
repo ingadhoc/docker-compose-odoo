@@ -49,6 +49,11 @@ else
     }
 fi
 
+# Odoo 20 on follows production; older versions keep the shared PG 15.
+pg_major_for() {
+    if [[ "$1" =~ ^[0-9]+$ ]] && [[ "$((10#$1))" -lt 20 ]]; then echo 15; else echo 17; fi
+}
+
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     # Check if "ODOO_V" is 2 digits or "master"
     if [[ "$ODOO_V" =~ ^[0-9]{2}$ ]] || [[ "$ODOO_V" == "master" ]]; then
@@ -57,6 +62,16 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         sed_inplace "s/^ODOO_VERSION=.*/ODOO_VERSION=$ODOO_V/" "$SCRIPT_DIR/.env"
         if ! grep -qE "^ODOO_MINOR=${ODOO_V}\." "$SCRIPT_DIR/.env"; then
             sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
+        fi
+
+        if [[ -n "$SKIP_CTX_PG" ]]; then
+            echo "SKIP_CTX_PG set, leaving ODOO_PGHOST untouched"
+        else
+            PG_MAJOR=$(pg_major_for "$ODOO_V")
+            PG_SERVICE="db${PG_MAJOR}"
+            # PG 15 is the context's original `db`, kept under that name.
+            [[ "$PG_MAJOR" == "15" ]] && PG_SERVICE="db"
+            echo "Odoo $ODOO_V uses PostgreSQL $PG_MAJOR ($PG_SERVICE)"
         fi
     fi
 
@@ -92,6 +107,50 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         docker pull ${ODOO_IMAGE}:${ODOO_MINOR}
     fi
 
+fi
+
+# PostgreSQL instance lives in the context repo, one per major. See README.
+# Stops here on failure, before the steps that recreate the Odoo container.
+if [[ -n "$PG_SERVICE" ]]; then
+    CTX_DIR="${CTX_DIR:-$(dirname "$SCRIPT_DIR")/ctx}"
+    if [[ ! -d "$CTX_DIR" ]]; then
+        echo "ERROR: no context repo at $CTX_DIR. Set CTX_DIR if it lives elsewhere."
+        exit 1
+    fi
+    # Docker would create a missing datadir as root, and postgres runs as uid 26.
+    PG_DATADIR=$(cd "$CTX_DIR" && docker compose --profile "pg${PG_MAJOR}" config --format json 2>/dev/null \
+        | jq -r ".services.\"$PG_SERVICE\".volumes[0].source // empty")
+    if [[ -n "$PG_DATADIR" ]] && [[ ! -d "$PG_DATADIR" ]]; then
+        echo "Creating datadir $PG_DATADIR"
+        mkdir -p "$PG_DATADIR"
+        if [[ "$OSTYPE" != "darwin"* ]]; then
+            sudo chown 26:102 "$PG_DATADIR"
+        fi
+    fi
+
+    echo "Starting $PG_SERVICE in the context repo ($CTX_DIR)"
+    if ! ( cd "$CTX_DIR" && docker compose --profile "pg${PG_MAJOR}" up -d "$PG_SERVICE" ); then
+        echo "ERROR: could not start $PG_SERVICE. Update the context repo (git pull) and rerun,"
+        echo "       or set SKIP_CTX_PG=1 if you run PostgreSQL yourself."
+        exit 1
+    fi
+
+    # `up -d` returns 0 even if the container crash-loops right after starting.
+    for _ in $(seq 30); do
+        docker exec "$PG_SERVICE" pg_isready -U odoo > /dev/null 2>&1 && PG_READY=1 && break
+        sleep 1
+    done
+    if [[ -z "$PG_READY" ]]; then
+        echo "ERROR: $PG_SERVICE started but never became ready. See: docker logs $PG_SERVICE"
+        exit 1
+    fi
+    # Claimed only now, so a failure above leaves the .env untouched.
+    # Namespaced so an exported libpq PGHOST cannot shadow it in compose.
+    if grep -q "^ODOO_PGHOST=" "$SCRIPT_DIR/.env"; then
+        sed_inplace "s/^ODOO_PGHOST=.*/ODOO_PGHOST=$PG_SERVICE/" "$SCRIPT_DIR/.env"
+    else
+        printf '\nODOO_PGHOST=%s\n' "$PG_SERVICE" >> "$SCRIPT_DIR/.env"
+    fi
 fi
 
 # Auth + estado de CLIs de agentes — setup del "hop" dir local al repo
