@@ -18,7 +18,7 @@ echo "Odoo version: $ODOO_V"
 
 # Limpieza de artefactos de versiones anteriores del setup
 rm -rf "$HOME/workspace"                                                   # viejo workspace dir
-rm -rf "$HOME/custom/.claude" "$HOME/custom/.agents"                      # skills instaladas en custom/ por error
+rm -rf "$HOME/custom/.claude" "$HOME/custom/.agents"                      # reset de las skills enlazadas (link_project_skills) y de las instaladas acá por error
 rm -rf "$HOME/custom/.codex" "$HOME/custom/.gemini"
 rm -f  "$HOME/custom/skills-lock.json"
 
@@ -603,51 +603,48 @@ else
     echo "OdooLS no soportado para Odoo $ODOO_V (requiere v18+). Saltando configuración."
 fi
 
-# Odoo skills installation - only for Odoo 18 or 19
-SKILL="odoo-${ODOO_V}"
+# Odoo skills installation
 SKILL_PATH=".agents/"
 
-# ingadhoc/skills — catálogo interno (solo skills de dominio Odoo +
-# product-sdd). Las skills universales del ecosistema
-# (adhoc-way-bootstrap, adhoc-way-pr-flow, adhoc-way-contribute) migraron
-# al repo `ingadhoc/adhoc-way/skills/` con prefijo `adhoc-way-`
-# (versions.json#canonical_skills_meta de adhoc-way es fuente de verdad
-# post-migración). Se instalan via bake user-level en la imagen OCI dev
-# (PR adhoc-cicd/oci-odoo-by-adhoc#33). En containers que no tengan ese
-# bake disponible todavía, los agentes pueden seguir usando el binario
-# `adhoc-way` para iniciar la capa Usuario manualmente.
+# La lista de skills la declara oba en `custom/oba/.adhoc/skills.json`, no este
+# script (tarea 73985). Son solo nombres: la ruta la resuelve el catálogo al
+# instalar. NO se llama `skills-lock.json` a propósito — ese nombre es del CLI
+# `npx skills`, que lo reescribe.
 INGADHOC_REPO="git@github.com:ingadhoc/skills.git"
-INGADHOC_SKILLS=(
-    # Odoo dev core
-    "odoo-${ODOO_V}"
-    "odoo-general"
-    "odoo-review"               # antes: odoo-code-review (rota silenciosa)
-    "odoo-translator"
-    "odoo-upgrade-migration"
-    # odoo-upgrade-lines se mudó al workspace Tuqui (skill MCP, multi-plataforma):
-    # cargar con skill_detail(name='odoo-upgrade-lines') — ingadhoc/skills#90
-    # Cadena de migración actua-20 (task 72749) — viven en odoo/modules/upgrades/
-    # del catálogo; la instalación resuelve por nombre, así que los moves de
-    # carpeta no rompen. odoo-code-migration-batch necesita más de una versión a
-    # la vez (su flujo completo corre en el host), pero se instala igual por
-    # paridad de catálogo.
-    "odoo-module-code-migration"
-    "odoo-code-migration-batch"
-    "odoo-upgrade-declarative-checks"
-    "odoo-test-from-commit"
-    "odoo-test-from-video"
-    "odoo-module-generator"
-    "odoo-auto-readme"          # antes: odoo-readme (rota silenciosa)
-    "odoo-commit-explainer"     # mensajes de commit Odoo-style
-    # odoo-video-to-docs se retira del catálogo (ingadhoc/skills#96): su flujo
-    # dependía de un script de capturas que quedó vacío. El reemplazo es
-    # odoo-screenshots, que vive en adhoc-way/knowledge-management-project y
-    # no se instala desde este catálogo.
-    # SDD / specs
-    "product-sdd"
-    # General
-    "gcp-logs"
-)
+OBA_SKILLS_DECL="$HOME/custom/oba/.adhoc/skills.json"
+INGADHOC_SKILLS=()
+# Presente pero ilegible es FALLO, no "oba no declaró nada": si esto fuera
+# silencioso, un typo de coma dejaría al equipo sin skills con el build verde.
+skills_decl_error=0
+if [[ -f "$OBA_SKILLS_DECL" ]]; then
+    jq_prog='if (.comun | type) != "array" then ("la clave \"comun\" no es una lista" | halt_error(1)) else .comun[] end'
+    if ! declaradas=$(jq -r "$jq_prog" "$OBA_SKILLS_DECL" 2>&1); then
+        echo "FALLO: no pude leer las skills declaradas en $OBA_SKILLS_DECL: $declaradas" >&2
+        skills_decl_error=1
+    elif [[ -z "$declaradas" ]]; then
+        echo "FALLO: $OBA_SKILLS_DECL está presente pero no declara ninguna skill." >&2
+        skills_decl_error=1
+    else
+        while IFS= read -r skill; do
+            [[ -n "$skill" ]] || continue
+            # La declaración nombra odoo-18 y odoo-19; acá queda la del container.
+            if [[ "$skill" =~ ^odoo-[0-9]+$ && "$skill" != "odoo-$ODOO_V" ]]; then
+                continue
+            fi
+            INGADHOC_SKILLS+=("$skill")
+        done <<< "$declaradas"
+        echo "Skills declaradas por oba: ${#INGADHOC_SKILLS[@]} (fuente: $OBA_SKILLS_DECL)"
+        if [[ ! " ${INGADHOC_SKILLS[*]} " == *" odoo-$ODOO_V "* ]]; then
+            echo "WARN: la declaración no nombra odoo-$ODOO_V — instalo el resto."
+        fi
+    fi
+elif [[ -f "$HOME/custom/oba/AGENTS.md" ]]; then
+    # oba está montado pero su clone es viejo: es el caso del día que esto
+    # mergee, y sin el fix el dev se queda sin skills sin saber por qué.
+    echo "WARN: falta $OBA_SKILLS_DECL en el clone montado de oba (clone viejo): actualizalo (git pull en ~/repositorios/oba) y rebuildeá. No instalo skills del catálogo."
+else
+    echo "WARN: no está $OBA_SKILLS_DECL — oba no montado. No instalo skills del catálogo."
+fi
 
 # find-skills (descubrimiento) y skill-creator (autoría) ya NO se auto-instalan
 # acá: son tier "recommended" (pull, no push) de adhoc-way (ADR 0032). No son
@@ -655,8 +652,10 @@ INGADHOC_SKILLS=(
 # surfacea con su comando de install y el dev las instala si quiere. Antes se
 # instalaban por `npx skills`, el camino que el tier recommended reemplaza.
 
-if [[ "$ODOO_V" != "18" && "$ODOO_V" != "19" ]]; then
-    echo "No hay 'skills' disponibles para Odoo $ODOO_V. Saltando instalación."
+if [ "$skills_decl_error" -eq 1 ]; then
+    echo "FALLO: no instalo skills del catálogo — la declaración de oba no se pudo leer (motivo arriba)." >&2
+elif [ "${#INGADHOC_SKILLS[@]}" -eq 0 ]; then
+    echo "Sin skills declaradas en $OBA_SKILLS_DECL: nada que instalar del catálogo."
 else
     # Skills se instalan desde $HOME → van a ~/.claude/skills/, ~/.agents/skills/, etc. (globales, persistidos)
     cd "$HOME"
@@ -665,9 +664,9 @@ else
     install_failed=0
     list_stale=0
 
-    # Validación pre-install: confirmar que cada skill de INGADHOC_SKILLS exista
-    # en el catálogo vivo. Cuando se modifica el catálogo (rename, move, baja) y
-    # este array no se sincroniza, `npx skills add` ignora el nombre que sobra
+    # Validación pre-install: confirmar que cada skill declarada exista en el
+    # catálogo vivo. Cuando se modifica el catálogo (rename, move, baja) y la
+    # declaración no se sincroniza, `npx skills add` ignora el nombre que sobra
     # sin decir nada y sale 0: instala el resto y la skill que falta no aparece
     # nunca. El script validate-skill-list.sh del propio catálogo hace visible
     # ese desvío.
@@ -716,8 +715,8 @@ else
     fi
 
     if [ "$list_stale" -ne 0 ]; then
-        echo "AVISO: la lista INGADHOC_SKILLS de este script nombra skills que ya no están en el catálogo (ver MISSING arriba)." >&2
-        echo "       El resto se instaló igual; esas no. Sacalas del array por PR a ingadhoc/docker-compose-odoo." >&2
+        echo "AVISO: $OBA_SKILLS_DECL nombra skills que ya no están en el catálogo (ver MISSING arriba)." >&2
+        echo "       El resto se instaló igual; esas no. Sacalas de la declaración por PR a ingadhoc/oba-project." >&2
     fi
 
     rm "$LOG_FILE" || true
@@ -808,6 +807,67 @@ echo "refresh-workspace disponible en $REFRESH_BIN"
 #   de habilitar auto-ejecución. Si emerge necesidad concreta, sumar
 #   declaración explícita por proyecto en discover-mounts.sh o en una
 #   whitelist ~/.adhoc/.
+#
+# Enlaza las skills que un repo montado ya trae commiteadas, para que el agente
+# parado en `custom/` las vea (tarea 73985). No instala nada. Enlazar no es
+# ejecutar código del repo: la decisión de arriba, de no correr sus scripts,
+# queda intacta.
+#
+# Este script es `postCreateCommand`: el enlazado se rehace al crear el
+# container, no en cada start. Una skill que un proyecto agregue después no
+# aparece hasta el próximo rebuild. El `rm -rf` del inicio limpia los dos
+# destinos, así que la función es idempotente y no deja restos.
+link_project_skills() {
+    local dir=$1 name=$2
+    local src="" cand skill sname dest linked=0
+    for cand in "$dir/.agents/skills" "$dir/.claude/skills"; do
+        [[ -d "$cand" ]] && { src="$cand"; break; }
+    done
+    [[ -n "$src" ]] || return 0
+    # El glob es `*` y no `*/` porque un symlink roto no matchea el de
+    # directorios, y ese es justo el caso que hay que reportar.
+    for skill in "$src"/*; do
+        [[ -e "$skill" || -L "$skill" ]] || continue   # el glob no matcheó nada
+        [[ -d "$skill" || -L "$skill" ]] || continue   # archivo suelto: no es una skill
+        sname=$(basename "$skill")
+        if [[ ! -f "$skill/SKILL.md" ]]; then
+            echo "    WARN: '$sname' de $name no tiene SKILL.md alcanzable (enlace roto?) — la salteo."
+            continue
+        fi
+        # Primero en llegar gana. El -L es necesario: un enlace roto no existe
+        # para -e y se pisaría sin aviso.
+        local ocupado="" motivo=""
+        for dest in "$HOME/custom/.claude/skills" "$HOME/custom/.agents/skills"; do
+            if [[ -e "$dest/$sname" || -L "$dest/$sname" ]]; then
+                ocupado="$dest"
+                # Un directorio real ahí no es el enlace de otro proyecto: es
+                # una skill instalada en custom/ por error. Contra eso ln
+                # anidaría el enlace adentro y saldría 0.
+                [[ -d "$dest/$sname" && ! -L "$dest/$sname" ]] && motivo=" (directorio real, no un enlace)"
+            fi
+        done
+        if [[ -n "$ocupado" ]]; then
+            echo "    WARN: '$sname' de $name ya está en ${ocupado#"$HOME"/}$motivo — no la piso."
+            continue
+        fi
+        # Verificado en el devcontainer: ante nombres iguales gana la del
+        # catálogo (user-level), no la del proyecto.
+        if [[ -e "$HOME/.claude/skills/$sname" ]]; then
+            echo "    WARN: '$sname' de $name queda tapada por la homónima del catálogo — la del proyecto no se usa."
+        fi
+        for dest in "$HOME/custom/.claude/skills" "$HOME/custom/.agents/skills"; do
+            mkdir -p "$dest"
+            if ! ln -sfn "$skill" "$dest/$sname"; then
+                echo "    WARN: no pude enlazar '$sname' en ${dest#"$HOME"/}."
+                continue 2
+            fi
+        done
+        linked=$((linked + 1))
+    done
+    [[ $linked -gt 0 ]] && echo "    $linked skill(s) enlazadas desde ${src#"$HOME"/custom/}"
+    return 0
+}
+
 for_each_mounted_project() {
     local count=0
     local d name
@@ -817,6 +877,7 @@ for_each_mounted_project() {
         [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
         [[ -f "$d/AGENTS.md" ]] || continue
         echo "  Proyecto mounteado: $name ($d)"
+        link_project_skills "${d%/}" "$name"
         count=$((count + 1))
     done
     echo "for_each_mounted_project: $count proyecto(s) detectado(s)."
