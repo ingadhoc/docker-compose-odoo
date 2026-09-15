@@ -608,9 +608,11 @@ SKILL_PATH=".agents/"
 
 # La lista de skills no vive en este script: cada proyecto montado declara las
 # suyas en su `skills-lock.json`, el formato del CLI `npx skills` (tarea 73985).
-# De cada entrada se lee solo el nombre y la fuente; el hash se ignora, porque la
-# instalación trae lo vigente del catálogo. Nunca se corre `experimental_install`
-# adentro del repo montado: reescribiría su lock y ejecutaría en su árbol.
+# De cada entrada se lee el nombre, la fuente y el `ref` si lo trae: el `ref` es
+# el pin real, y se instala desde ese tag o commit (`fuente#ref`, la misma forma
+# que arma el CLI al restaurar). `computedHash` y `skillPath` se ignoran: el CLI
+# no valida el hash y la instalación resuelve la skill por nombre. Nunca se corre
+# `experimental_install` adentro del repo montado: reescribiría su lock.
 
 # Proyectos montados: dirs de custom/ con AGENTS.md. Lo usan esta sección y
 # for_each_mounted_project, más abajo.
@@ -634,8 +636,8 @@ declara_version=0
 # fuera silencioso, un typo de coma dejaría al equipo sin skills con el build
 # verde. El FALLO saltea ese proyecto; los demás se instalan igual.
 collect_declared_skills() {
-    local dir name lock pares skill fuente tipo
-    local jq_prog='if (.skills | type) != "object" then ("la clave \"skills\" no es un objeto" | halt_error(1)) else .skills | to_entries[] | "\(.key)\t\(.value.sourceUrl // .value.source // "")\t\(.value.sourceType // "")" end'
+    local dir name lock pares skill fuente tipo ref
+    local jq_prog='if (.skills | type) != "object" then ("la clave \"skills\" no es un objeto" | halt_error(1)) else .skills | to_entries[] | "\(.key)\u001f\(.value.sourceUrl // .value.source // "")\u001f\(.value.sourceType // "")\u001f\(.value.ref // "")" end'
     while IFS= read -r dir; do
         [[ -n "$dir" ]] || continue
         name=$(basename "$dir")
@@ -656,7 +658,9 @@ collect_declared_skills() {
             skills_decl_error=1
             continue
         fi
-        while IFS=$'\t' read -r skill fuente tipo; do
+        # Separador \x1f y no tab: el tab es blanco para `read` y dos campos vacíos
+        # seguidos se colapsarían, corriendo el `ref` a otra columna.
+        while IFS=$'\x1f' read -r skill fuente tipo ref; do
             [[ -n "$skill" ]] || continue
             if [[ -z "$fuente" ]]; then
                 echo "FALLO: '$skill' en $lock no tiene fuente (source/sourceUrl) — la salteo." >&2
@@ -667,6 +671,7 @@ collect_declared_skills() {
                 echo "WARN: '$skill' de $name viene de node_modules, que este script no instala — la salteo."
                 continue
             fi
+            [[ -z "$ref" ]] || fuente="$fuente#$ref"
             # Las skills de versión (odoo-18, odoo-19): acá queda la del container.
             if [[ "$skill" =~ ^odoo-[0-9]+$ ]]; then
                 declara_version=1
@@ -755,7 +760,9 @@ else
 
     for fuente in "${FUENTES[@]}"; do
         read -r -a skills_fuente <<< "${SKILLS_BY_SOURCE[$fuente]}"
-        if is_ingadhoc_catalog "$fuente"; then
+        if [[ "$fuente" == *#* ]]; then
+            echo "Sin validación de nombres para $fuente (el chequeo mira la rama principal, no un ref fijo)."
+        elif is_ingadhoc_catalog "$fuente"; then
             validate_ingadhoc_skills "${skills_fuente[@]}"
         else
             echo "Sin validación de nombres para $fuente (el chequeo es del catálogo ingadhoc/skills)."
