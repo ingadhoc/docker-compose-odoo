@@ -603,109 +603,178 @@ else
     echo "OdooLS no soportado para Odoo $ODOO_V (requiere v18+). Saltando configuración."
 fi
 
-# Odoo skills installation
+# Skills del catálogo que declaran los proyectos montados
 SKILL_PATH=".agents/"
 
-# La lista de skills la declara oba en `custom/oba/.adhoc/skills.json`, no este
-# script (tarea 73985). Son solo nombres: la ruta la resuelve el catálogo al
-# instalar. NO se llama `skills-lock.json` a propósito — ese nombre es del CLI
-# `npx skills`, que lo reescribe.
-INGADHOC_REPO="git@github.com:ingadhoc/skills.git"
-OBA_SKILLS_DECL="$HOME/custom/oba/.adhoc/skills.json"
-INGADHOC_SKILLS=()
-# Presente pero ilegible es FALLO, no "oba no declaró nada": si esto fuera
-# silencioso, un typo de coma dejaría al equipo sin skills con el build verde.
+# La lista de skills no vive en este script: cada proyecto montado declara las
+# suyas en su `skills-lock.json`, el formato del CLI `npx skills` (tarea 73985).
+# De cada entrada se lee solo el nombre y la fuente; el hash se ignora, porque la
+# instalación trae lo vigente del catálogo. Nunca se corre `experimental_install`
+# adentro del repo montado: reescribiría su lock y ejecutaría en su árbol.
+
+# Proyectos montados: dirs de custom/ con AGENTS.md. Lo usan esta sección y
+# for_each_mounted_project, más abajo.
+mounted_project_dirs() {
+    local d name
+    for d in "$HOME/custom"/*/; do
+        [[ -d "$d" ]] || continue
+        name=$(basename "$d")
+        [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
+        [[ -f "$d/AGENTS.md" ]] || continue
+        echo "${d%/}"
+    done
+}
+
+declare -A SKILL_SOURCE=() SKILL_ORIGIN=()
+SKILL_NAMES=()
 skills_decl_error=0
-if [[ -f "$OBA_SKILLS_DECL" ]]; then
-    jq_prog='if (.comun | type) != "array" then ("la clave \"comun\" no es una lista" | halt_error(1)) else .comun[] end'
-    if ! declaradas=$(jq -r "$jq_prog" "$OBA_SKILLS_DECL" 2>&1); then
-        echo "FALLO: no pude leer las skills declaradas en $OBA_SKILLS_DECL: $declaradas" >&2
-        skills_decl_error=1
-    elif [[ -z "$declaradas" ]]; then
-        echo "FALLO: $OBA_SKILLS_DECL está presente pero no declara ninguna skill." >&2
-        skills_decl_error=1
-    else
-        while IFS= read -r skill; do
+declara_version=0
+
+# Presente pero ilegible es FALLO, no "el proyecto no declaró nada": si esto
+# fuera silencioso, un typo de coma dejaría al equipo sin skills con el build
+# verde. El FALLO saltea ese proyecto; los demás se instalan igual.
+collect_declared_skills() {
+    local dir name lock pares skill fuente tipo
+    local jq_prog='if (.skills | type) != "object" then ("la clave \"skills\" no es un objeto" | halt_error(1)) else .skills | to_entries[] | "\(.key)\t\(.value.sourceUrl // .value.source // "")\t\(.value.sourceType // "")" end'
+    while IFS= read -r dir; do
+        [[ -n "$dir" ]] || continue
+        name=$(basename "$dir")
+        lock="$dir/skills-lock.json"
+        if [[ ! -f "$lock" ]]; then
+            if [[ -f "$dir/.adhoc/skills.json" ]]; then
+                echo "WARN: $name tiene .adhoc/skills.json y no skills-lock.json (clon viejo): actualizá su clon en el host (git pull) y rebuildeá. No instalo sus skills."
+            fi
+            continue
+        fi
+        if ! pares=$(jq -r "$jq_prog" "$lock" 2>&1); then
+            echo "FALLO: no pude leer las skills declaradas en $lock: $pares" >&2
+            skills_decl_error=1
+            continue
+        fi
+        if [[ -z "$pares" ]]; then
+            echo "FALLO: $lock está presente pero no declara ninguna skill." >&2
+            skills_decl_error=1
+            continue
+        fi
+        while IFS=$'\t' read -r skill fuente tipo; do
             [[ -n "$skill" ]] || continue
-            # La declaración nombra odoo-18 y odoo-19; acá queda la del container.
-            if [[ "$skill" =~ ^odoo-[0-9]+$ && "$skill" != "odoo-$ODOO_V" ]]; then
+            if [[ -z "$fuente" ]]; then
+                echo "FALLO: '$skill' en $lock no tiene fuente (source/sourceUrl) — la salteo." >&2
+                skills_decl_error=1
                 continue
             fi
-            INGADHOC_SKILLS+=("$skill")
-        done <<< "$declaradas"
-        echo "Skills declaradas por oba: ${#INGADHOC_SKILLS[@]} (fuente: $OBA_SKILLS_DECL)"
-        if [[ ! " ${INGADHOC_SKILLS[*]} " == *" odoo-$ODOO_V "* ]]; then
-            echo "WARN: la declaración no nombra odoo-$ODOO_V — instalo el resto."
-        fi
+            if [[ "$tipo" == "node_modules" ]]; then
+                echo "WARN: '$skill' de $name viene de node_modules, que este script no instala — la salteo."
+                continue
+            fi
+            # Las skills de versión (odoo-18, odoo-19): acá queda la del container.
+            if [[ "$skill" =~ ^odoo-[0-9]+$ ]]; then
+                declara_version=1
+                [[ "$skill" == "odoo-$ODOO_V" ]] || continue
+            fi
+            if [[ -n "${SKILL_SOURCE[$skill]:-}" ]]; then
+                if [[ "${SKILL_SOURCE[$skill]}" != "$fuente" ]]; then
+                    echo "WARN: '$skill' la declaran ${SKILL_ORIGIN[$skill]} (${SKILL_SOURCE[$skill]}) y $name ($fuente) — gana ${SKILL_ORIGIN[$skill]}."
+                fi
+                continue
+            fi
+            SKILL_SOURCE[$skill]="$fuente"
+            SKILL_ORIGIN[$skill]="$name"
+            SKILL_NAMES+=("$skill")
+        done <<< "$pares"
+        echo "Skills declaradas por $name: $(grep -c . <<< "$pares") (fuente: $lock)"
+    done < <(mounted_project_dirs)
+    if [[ $declara_version -eq 1 && -z "${SKILL_SOURCE[odoo-$ODOO_V]:-}" ]]; then
+        echo "WARN: ningún proyecto declara odoo-$ODOO_V — instalo el resto."
     fi
-elif [[ -f "$HOME/custom/oba/AGENTS.md" ]]; then
-    # oba está montado pero su clone es viejo: es el caso del día que esto
-    # mergee, y sin el fix el dev se queda sin skills sin saber por qué.
-    echo "WARN: falta $OBA_SKILLS_DECL en el clone montado de oba (clone viejo): actualizalo (git pull en ~/repositorios/oba) y rebuildeá. No instalo skills del catálogo."
-else
-    echo "WARN: no está $OBA_SKILLS_DECL — oba no montado. No instalo skills del catálogo."
-fi
+}
+
+# El script de validación es del catálogo ingadhoc/skills: solo sirve para esa fuente.
+is_ingadhoc_catalog() {
+    case "$1" in
+        git@github.com:ingadhoc/skills.git|git@github.com:ingadhoc/skills|https://github.com/ingadhoc/skills.git|https://github.com/ingadhoc/skills|ingadhoc/skills) return 0 ;;
+    esac
+    return 1
+}
+
+# Validación pre-install: confirmar que cada skill declarada exista en el
+# catálogo vivo. Cuando se modifica el catálogo (rename, move, baja) y la
+# declaración no se sincroniza, `npx skills add` ignora el nombre que sobra sin
+# decir nada y sale 0: instala el resto y la skill que falta no aparece nunca.
+# Origen: adhoc-way spec 0014 (política-skills-y-flujo-contributor), Eje 2.
+#
+# La lista vieja NO es un fallo de instalación: se reporta aparte para no
+# disparar el "no se pudieron instalar las skills" cuando se instalaron todas
+# menos la que ya no existe.
+validate_ingadhoc_skills() {
+    local dir out rc=0 missing
+    dir=$(mktemp -d)
+    if ! git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$dir" 2>/dev/null; then
+        echo "WARN: no pude clonar ingadhoc/skills para validar la lista — sigo sin validación."
+        rm -rf "$dir"
+        return 0
+    fi
+    out=$(bash "$dir/scripts/validate-skill-list.sh" "$@" 2>&1) || rc=1
+    rm -rf "$dir"
+    echo "$out"
+    if [[ $rc -ne 0 ]]; then
+        echo "AVISO: hay skills declaradas que ya no están en ingadhoc/skills. El resto se instala igual; estas no:" >&2
+        while IFS= read -r missing; do
+            echo "       - $missing (declarada en ${SKILL_ORIGIN[$missing]:-?}: sacala de su skills-lock.json por PR)" >&2
+        done < <(sed -n 's/^MISSING: //p' <<< "$out")
+    fi
+}
 
 # find-skills (descubrimiento) y skill-creator (autoría) ya NO se auto-instalan
 # acá: son tier "recommended" (pull, no push) de adhoc-way (ADR 0032). No son
 # esenciales; `adhoc-way init` (que corre más abajo en este poststart) las
-# surfacea con su comando de install y el dev las instala si quiere. Antes se
-# instalaban por `npx skills`, el camino que el tier recommended reemplaza.
+# surfacea con su comando de install y el dev las instala si quiere.
 
-if [ "$skills_decl_error" -eq 1 ]; then
-    echo "FALLO: no instalo skills del catálogo — la declaración de oba no se pudo leer (motivo arriba)." >&2
-elif [ "${#INGADHOC_SKILLS[@]}" -eq 0 ]; then
-    echo "Sin skills declaradas en $OBA_SKILLS_DECL: nada que instalar del catálogo."
+collect_declared_skills
+
+if [ "${#SKILL_NAMES[@]}" -eq 0 ]; then
+    if [ "$skills_decl_error" -eq 1 ]; then
+        echo "FALLO: no instalo skills del catálogo — ninguna declaración se pudo leer (motivo arriba)." >&2
+    else
+        echo "Ningún proyecto montado declara skills en skills-lock.json: nada que instalar del catálogo."
+    fi
 else
-    # Skills se instalan desde $HOME → van a ~/.claude/skills/, ~/.agents/skills/, etc. (globales, persistidos)
+    # Desde $HOME → quedan en ~/.claude/skills/, ~/.agents/skills/, etc. (user-level, persisten)
     cd "$HOME"
-    echo "Installing odoo skills in $PWD"
+    echo "Installing declared skills in $PWD"
     LOG_FILE="$PWD/install_skill.log"
     install_failed=0
-    list_stale=0
 
-    # Validación pre-install: confirmar que cada skill declarada exista en el
-    # catálogo vivo. Cuando se modifica el catálogo (rename, move, baja) y la
-    # declaración no se sincroniza, `npx skills add` ignora el nombre que sobra
-    # sin decir nada y sale 0: instala el resto y la skill que falta no aparece
-    # nunca. El script validate-skill-list.sh del propio catálogo hace visible
-    # ese desvío.
-    # Origen: adhoc-way spec 0014 (política-skills-y-flujo-contributor), Eje 2.
-    #
-    # La lista vieja NO es un fallo de instalación: se reporta aparte
-    # (list_stale) para no disparar el "no se pudieron instalar las skills"
-    # cuando en realidad se instalaron todas menos la que ya no existe.
-    VALIDATE_DIR=$(mktemp -d)
-    if git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$VALIDATE_DIR" 2>/dev/null; then
-        if ! bash "$VALIDATE_DIR/scripts/validate-skill-list.sh" "${INGADHOC_SKILLS[@]}"; then
-            list_stale=1
-        fi
-        rm -rf "$VALIDATE_DIR"
-    else
-        echo "WARN: no pude clonar ingadhoc/skills para validar la lista — sigo sin validación."
-        rm -rf "$VALIDATE_DIR"
-    fi
-
-    # ingadhoc/skills — instalar para todos los agentes (paridad)
-    SKILL_ARGS=()
-    for skill in "${INGADHOC_SKILLS[@]}"; do
-        SKILL_ARGS+=(--skill "$skill")
+    declare -A SKILLS_BY_SOURCE=()
+    FUENTES=()
+    for skill in "${SKILL_NAMES[@]}"; do
+        fuente="${SKILL_SOURCE[$skill]}"
+        [[ -n "${SKILLS_BY_SOURCE[$fuente]:-}" ]] || FUENTES+=("$fuente")
+        SKILLS_BY_SOURCE[$fuente]+="$skill "
     done
 
-    for agent in claude-code codex gemini-cli github-copilot; do
-        if ! CI=true npx --yes skills add "$INGADHOC_REPO" \
-            "${SKILL_ARGS[@]}" \
-            --agent "$agent" \
-            --no-interactive \
-            --yes >> "$LOG_FILE" 2>&1; then
-            install_failed=1
-            echo "FALLO: error instalando skills de $INGADHOC_REPO para $agent"
+    for fuente in "${FUENTES[@]}"; do
+        read -r -a skills_fuente <<< "${SKILLS_BY_SOURCE[$fuente]}"
+        if is_ingadhoc_catalog "$fuente"; then
+            validate_ingadhoc_skills "${skills_fuente[@]}"
+        else
+            echo "Sin validación de nombres para $fuente (el chequeo es del catálogo ingadhoc/skills)."
         fi
+        SKILL_ARGS=()
+        for skill in "${skills_fuente[@]}"; do
+            SKILL_ARGS+=(--skill "$skill")
+        done
+        for agent in claude-code codex gemini-cli github-copilot; do
+            if ! CI=true npx --yes skills add "$fuente" \
+                "${SKILL_ARGS[@]}" \
+                --agent "$agent" \
+                --no-interactive \
+                --yes >> "$LOG_FILE" 2>&1; then
+                install_failed=1
+                echo "FALLO: error instalando skills de $fuente para $agent"
+            fi
+        done
     done
-
-    # (find-skills / skill-creator ya no se instalan acá — son tier recommended
-    # de adhoc-way; las surfacea `adhoc-way init`. Ver nota más arriba, donde
-    # estaba la lista de skills externas.)
 
     if [ "$install_failed" -eq 0 ] && [ -d "$PWD/$SKILL_PATH" ]; then
         echo "Skills installed."
@@ -713,10 +782,8 @@ else
         echo "FALLO: no se pudieron instalar las skills. Mostrando últimas líneas del log de instalación:"
         tail -n 200 "$LOG_FILE" || true
     fi
-
-    if [ "$list_stale" -ne 0 ]; then
-        echo "AVISO: $OBA_SKILLS_DECL nombra skills que ya no están en el catálogo (ver MISSING arriba)." >&2
-        echo "       El resto se instaló igual; esas no. Sacalas de la declaración por PR a ingadhoc/oba-project." >&2
+    if [ "$skills_decl_error" -eq 1 ]; then
+        echo "FALLO: alguna declaración no se pudo leer (motivo arriba); sus skills no se instalaron." >&2
     fi
 
     rm "$LOG_FILE" || true
@@ -871,15 +938,13 @@ link_project_skills() {
 for_each_mounted_project() {
     local count=0
     local d name
-    for d in "$HOME/custom"/*/; do
-        [[ -d "$d" ]] || continue
+    while IFS= read -r d; do
+        [[ -n "$d" ]] || continue
         name=$(basename "$d")
-        [[ $name == .* || $name == repositories || $name == src || $name == adhoc || $name == tmp* ]] && continue
-        [[ -f "$d/AGENTS.md" ]] || continue
-        echo "  Proyecto mounteado: $name ($d)"
-        link_project_skills "${d%/}" "$name"
+        echo "  Proyecto mounteado: $name ($d/)"
+        link_project_skills "$d" "$name"
         count=$((count + 1))
-    done
+    done < <(mounted_project_dirs)
     echo "for_each_mounted_project: $count proyecto(s) detectado(s)."
 }
 for_each_mounted_project
