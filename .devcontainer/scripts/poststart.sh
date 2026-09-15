@@ -608,10 +608,9 @@ SKILL_PATH=".agents/"
 
 # La lista de skills no vive en este script: cada proyecto montado declara las
 # suyas en su `skills-lock.json`, el formato del CLI `npx skills` (tarea 73985).
-# De cada entrada se lee el nombre, la fuente y el `ref` si lo trae: el `ref` es
-# el pin real, y se instala desde ese tag o commit (`fuente#ref`, la misma forma
-# que arma el CLI al restaurar). `computedHash` y `skillPath` se ignoran: el CLI
-# no valida el hash y la instalación resuelve la skill por nombre. Nunca se corre
+# De cada entrada se leen el nombre, la fuente (`sourceUrl` o `source`) y el `ref`
+# si lo trae; lo demás se ignora. El `ref` es el pin: se instala desde
+# `fuente#ref`, la misma forma que arma el CLI al restaurar. Nunca se corre
 # `experimental_install` adentro del repo montado: reescribiría su lock.
 
 # Proyectos montados: dirs de custom/ con AGENTS.md. Lo usan esta sección y
@@ -636,10 +635,9 @@ declara_version=0
 # fuera silencioso, un typo de coma dejaría al equipo sin skills con el build
 # verde. El FALLO saltea ese proyecto; los demás se instalan igual.
 collect_declared_skills() {
-    local dir name lock pares skill fuente tipo ref
-    local jq_prog='if (.skills | type) != "object" then ("la clave \"skills\" no es un objeto" | halt_error(1)) else .skills | to_entries[] | "\(.key)\u001f\(.value.sourceUrl // .value.source // "")\u001f\(.value.sourceType // "")\u001f\(.value.ref // "")" end'
+    local dir name lock pares skill fuente ref
+    local jq_prog='if (.skills | type) != "object" then ("la clave \"skills\" no es un objeto" | halt_error(1)) else .skills | to_entries[] | "\(.key)\u001f\(.value.sourceUrl // .value.source // "")\u001f\(.value.ref // "")" end'
     while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
         name=$(basename "$dir")
         lock="$dir/skills-lock.json"
         if [[ ! -f "$lock" ]]; then
@@ -658,17 +656,13 @@ collect_declared_skills() {
             skills_decl_error=1
             continue
         fi
-        # Separador \x1f y no tab: el tab es blanco para `read` y dos campos vacíos
-        # seguidos se colapsarían, corriendo el `ref` a otra columna.
-        while IFS=$'\x1f' read -r skill fuente tipo ref; do
+        # Separador \x1f y no tab: con tab, `read` colapsa campos vacíos seguidos y
+        # una entrada sin fuente pero con `ref` tomaría el ref como fuente.
+        while IFS=$'\x1f' read -r skill fuente ref; do
             [[ -n "$skill" ]] || continue
             if [[ -z "$fuente" ]]; then
                 echo "FALLO: '$skill' en $lock no tiene fuente (source/sourceUrl) — la salteo." >&2
                 skills_decl_error=1
-                continue
-            fi
-            if [[ "$tipo" == "node_modules" ]]; then
-                echo "WARN: '$skill' de $name viene de node_modules, que este script no instala — la salteo."
                 continue
             fi
             [[ -z "$ref" ]] || fuente="$fuente#$ref"
@@ -692,14 +686,6 @@ collect_declared_skills() {
     if [[ $declara_version -eq 1 && -z "${SKILL_SOURCE[odoo-$ODOO_V]:-}" ]]; then
         echo "WARN: ningún proyecto declara odoo-$ODOO_V — instalo el resto."
     fi
-}
-
-# El script de validación es del catálogo ingadhoc/skills: solo sirve para esa fuente.
-is_ingadhoc_catalog() {
-    case "$1" in
-        git@github.com:ingadhoc/skills.git|git@github.com:ingadhoc/skills|https://github.com/ingadhoc/skills.git|https://github.com/ingadhoc/skills|ingadhoc/skills) return 0 ;;
-    esac
-    return 1
 }
 
 # Validación pre-install: confirmar que cada skill declarada exista en el
@@ -762,7 +748,8 @@ else
         read -r -a skills_fuente <<< "${SKILLS_BY_SOURCE[$fuente]}"
         if [[ "$fuente" == *#* ]]; then
             echo "Sin validación de nombres para $fuente (el chequeo mira la rama principal, no un ref fijo)."
-        elif is_ingadhoc_catalog "$fuente"; then
+        elif [[ "$fuente" =~ ^(git@github\.com:|https://github\.com/)?ingadhoc/skills(\.git)?$ ]]; then
+            # validate-skill-list.sh es de ese catálogo: para otra fuente no sirve.
             validate_ingadhoc_skills "${skills_fuente[@]}"
         else
             echo "Sin validación de nombres para $fuente (el chequeo es del catálogo ingadhoc/skills)."
