@@ -626,6 +626,22 @@ mounted_project_dirs() {
     done
 }
 
+# Mismo conjunto, pero con oba adelante: ante el mismo nombre de skill gana el
+# primero, y el conjunto común lo declara oba (punto 4 del ADR 0068). Entre los
+# demás queda el orden del glob, alfabético, y el choque se avisa igual.
+skills_decl_order() {
+    local d dirs=()
+    while IFS= read -r d; do
+        if [[ "$(basename "$d")" == oba ]]; then
+            dirs=("$d" "${dirs[@]}")
+        else
+            dirs+=("$d")
+        fi
+    done < <(mounted_project_dirs)
+    [[ ${#dirs[@]} -gt 0 ]] && printf '%s\n' "${dirs[@]}"
+    return 0
+}
+
 declare -A SKILL_SOURCE=() SKILL_ORIGIN=()
 SKILL_NAMES=()
 skills_decl_error=0
@@ -682,7 +698,7 @@ collect_declared_skills() {
             SKILL_NAMES+=("$skill")
         done <<< "$pares"
         echo "Skills declaradas por $name: $(grep -c . <<< "$pares") (fuente: $lock)"
-    done < <(mounted_project_dirs)
+    done < <(skills_decl_order)
     if [[ $declara_version -eq 1 && -z "${SKILL_SOURCE[odoo-$ODOO_V]:-}" ]]; then
         echo "WARN: ningún proyecto declara odoo-$ODOO_V — instalo el resto."
     fi
