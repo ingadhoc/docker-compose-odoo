@@ -19,6 +19,9 @@ docker-compose.auto-mounts.yml
 # Mapeo host→container de repos del ecosistema para share-claude-sessions.sh.
 # Auto-generado por discover-mounts.sh; per-machine (paths del host de cada dev).
 .devcontainer/scripts/.session-mounts.tsv
+# Stamp del último `docker pull` de self-update.sh: su mtime es la ventana de
+# 24h del pull de imagen. Per-machine.
+.devcontainer/.last-image-pull
 .devcontainer/.vscode/settings.json
 .devcontainer/workspace/*
 !.devcontainer/workspace/.gitkeep

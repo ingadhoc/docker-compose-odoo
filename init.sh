@@ -3,16 +3,18 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ODOO_V=$(basename "$SCRIPT_DIR")
 
+# Shared with self-update.sh, which reads it to avoid overwriting these files.
+source "$SCRIPT_DIR/.devcontainer/scripts/lib/managed-files.sh"
+
 assume-unchanged() {
     local OPERATION="--assume-unchanged"
     if [[ $1 == "no" ]]; then
         OPERATION="--no-assume-unchanged"
     fi
-    git update-index ${OPERATION} $SCRIPT_DIR/.devcontainer/.vscode/launch.json
-    git update-index ${OPERATION} $SCRIPT_DIR/.devcontainer/scripts/oncreate.sh
-    git update-index ${OPERATION} $SCRIPT_DIR/.devcontainer/devcontainer.json
-    git update-index ${OPERATION} $SCRIPT_DIR/.env
-    git update-index ${OPERATION} $SCRIPT_DIR/docker-compose.yml
+    local f
+    for f in "${MANAGED_FILES[@]}"; do
+        git update-index ${OPERATION} "$SCRIPT_DIR/$f"
+    done
     # To revert the changes, you can use:
     # git update-index --no-assume-unchanged .devcontainer/.vscode/launch.json
 }
@@ -106,6 +108,8 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
     else
         docker pull ${ODOO_IMAGE}:${ODOO_MINOR}
     fi
+    # Same stamp self-update.sh uses to skip its daily pull.
+    touch "$SCRIPT_DIR/.devcontainer/.last-image-pull"
 
 fi
 

@@ -5,10 +5,12 @@
     "../docker-compose.auto-mounts.yml"
   ],
   "service": "odoo",
-  // initializeCommand corre en host antes de docker compose up. Regenera
-  // docker-compose.auto-mounts.yml descubriendo qué proyectos del ecosistema
-  // (devops, adhoc-way, oba, self) están presentes en el host. Ver script.
-  "initializeCommand": ".devcontainer/scripts/discover-mounts.sh",
+  // initializeCommand corre en host antes de docker compose up. Dos pasos,
+  // en orden: self-update.sh pone al día el clone (fast-forward de main) y la
+  // imagen de Odoo; discover-mounts.sh regenera docker-compose.auto-mounts.yml
+  // descubriendo qué proyectos del ecosistema (devops, adhoc-way, oba, self)
+  // están presentes en el host. Ver scripts.
+  "initializeCommand": ".devcontainer/scripts/initialize.sh",
   // "workspaceFolder": "/workspace",
   // "workspaceFolder": "/home/odoo/custom/repositories",
   "workspaceFolder": "/home/odoo/custom",

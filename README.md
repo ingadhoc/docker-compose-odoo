@@ -57,9 +57,59 @@ ahí y en el puerto 5432, pero para usarlas del otro lado hay que mudarlas con
 devcontainer open ~/odoo/18
 ```
 
+## Actualización automática al levantar el devcontainer
+
+Cada `~/odoo/<version>` es un clone propio de este repo, así que cada uno
+envejece por su cuenta: el que no abrís hace un mes se queda un mes atrás. Al
+levantar el devcontainer, `.devcontainer/scripts/self-update.sh` corre en el
+host (primer paso del `initializeCommand`) y pone al día **esa** versión, la
+que estás abriendo — nunca las hermanas.
+
+Hace dos cosas:
+
+- **El clone.** `git fetch` del upstream de `main` y `git merge --ff-only`.
+  Solo fast-forward: si tenés commits propios, si estás parado en otra rama o
+  si el merge no es limpio, avisa y no toca nada.
+- **La imagen.** `docker pull` de `${ODOO_IMAGE}:${ODOO_MINOR}`, a lo sumo una
+  vez cada 24 h — el mtime del stamp `.devcontainer/.last-image-pull` es la
+  ventana. Si la imagen cambió, avisa: puede hacer falta un *Rebuild
+  Container* para que el container salga de la nueva.
+
+Ninguna de las dos puede voltear el arranque: todo fallo (sin red, la llave
+pide passphrase, el registry no responde) sale como warning y el devcontainer
+levanta igual.
+
+**Lo que no actualiza solo.** `init.sh` patchea por versión unos pocos
+archivos (`.env`, `docker-compose.yml`, `devcontainer.json`, `oncreate.sh`,
+`launch.json` — la lista vive en `.devcontainer/scripts/lib/managed-files.sh`)
+y los marca `--assume-unchanged`. Si los commits nuevos tocan alguno, el
+self-update **no mergea**: un fast-forward a secas te dejaría el `.env` de
+upstream con el `DOMAIN` y el `ODOO_VERSION` de otra versión. Ahí te lo dice y
+lo ponés al día vos, que es también la receta para destrabar un clone que
+quedó muy atrás:
+
+```sh
+cd ~/odoo/19
+./init.sh -u              # git vuelve a ver los archivos patcheados
+git stash                 # guarda tus ediciones locales
+git pull --ff-only
+./init.sh                 # re-aplica la config de versión, pullea imagen y re-marca
+git stash pop             # solo si tenías ediciones propias además del patch
+```
+
+Pasa poco: de 37 commits en 90 días, 6 tocaron alguno de esos archivos.
+
+**Opt-out.** `SKIP_SELF_UPDATE=1` en el entorno del host no actualiza nada.
+`SELF_UPDATE_IMAGE_MAX_AGE=<segundos>` cambia la ventana del pull de imagen
+(`0` = pullear en cada arranque).
+
+**Un clone que todavía no tiene el mecanismo** (clonado antes de esto) no se
+actualiza solo la primera vez: corré la receta de arriba una vez y de ahí en
+más se mantiene al día.
+
 ## Mounts auto-detectados de proyectos del ecosistema adhoc-way
 
-Los proyectos del ecosistema (`devops`, `adhoc-way`, `oba`, etc.) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (gatillado por `initializeCommand` en `devcontainer.json`), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
+Los proyectos del ecosistema (`devops`, `adhoc-way`, `oba`, etc.) viven en paths host estables fuera de `custom/<version>/` y se exponen al devcontainer vía bind-mount. La detección es **automática**: `.devcontainer/scripts/discover-mounts.sh` corre en host antes de cada `docker compose up` (segundo paso del `initializeCommand`, después del self-update), inspecciona qué paths del catálogo existen y regenera `docker-compose.auto-mounts.yml`.
 
 El catálogo es config de **este** devcontainer (qué repos del ecosistema conviene montar al lado) y vive hardcodeado en `discover-mounts.sh`. Convención de paths host por defecto:
 
