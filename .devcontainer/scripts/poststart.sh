@@ -440,6 +440,10 @@ ensure_github_https_fallback() {
 }
 ensure_github_https_fallback
 
+# Los hooks de git del workspace, en el primer arranque. El mismo script corre
+# en cada postStart, así que los containers ya creados no necesitan rebuild.
+/scripts/ensure-git-hooks-path.sh
+
 # adhoc-way — CLI del patrón cross-vendor (ingadhoc/adhoc-way).
 #
 # Reinstalación condicional: comparamos el SHA del HEAD remoto contra

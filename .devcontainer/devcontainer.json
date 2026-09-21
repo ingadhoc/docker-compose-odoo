@@ -28,6 +28,10 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
   "postStartCommand": {
+    // El gitconfig copiado del host puede traer un core.hooksPath que acá no
+    // existe, y con eso git no corre ningún hook. Va en postStart, no en
+    // postCreate, para que los containers ya creados lo reciban sin rebuild.
+    "git-hooks-path": "/scripts/ensure-git-hooks-path.sh >> /tmp/postStartCommand.log 2>&1",
     "claude-sessions": "/scripts/share-claude-sessions.sh > /tmp/postStartCommand.log 2>&1",
     // Watchdog de memoria de los language servers. El `sleep 2` no es
     // cosmético: el exec del devcontainer corre con TTY y lo desarma apenas
