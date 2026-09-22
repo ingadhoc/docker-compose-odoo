@@ -32,8 +32,11 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 OUT="${REPO_ROOT}/docker-compose.auto-mounts.yml"
 
 # GCP legacy credentials: resolver cuenta activa antes de armar el catálogo.
+# Va detrás de R2_ENABLE_DEVOPS, igual que ~/.kube, ~/.config/gcloud y ~/.docker:
+# el dir que monta contiene el refresh_token de la cuenta, así que es una
+# credencial, no un repo del catálogo.
 _gcp_src=""
-if command -v gcloud &>/dev/null; then
+if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]] && command -v gcloud &>/dev/null; then
     _gcp_account="$(gcloud config get-value account 2>/dev/null || true)"
     if [[ -n "$_gcp_account" ]]; then
         _gcp_src="${HOME}/.config/gcloud/legacy_credentials/${_gcp_account}"
