@@ -1124,10 +1124,10 @@ if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
                 | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list \
             && sudo apt-get -qq update \
             && sudo apt-get -qq install -y --no-install-recommends google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin \
-            && echo "gcloud $(gcloud version --format='value(Google Cloud SDK)') instalado." \
+            && echo "gcloud $(gcloud version --format='value("Google Cloud SDK")') instalado." \
             || echo "FALLO: no se pudo instalar gcloud"
     else
-        echo "gcloud ya presente ($(gcloud version --format='value(Google Cloud SDK)' 2>/dev/null))."
+        echo "gcloud ya presente ($(gcloud version --format='value("Google Cloud SDK")' 2>/dev/null))."
     fi
 fi
 
