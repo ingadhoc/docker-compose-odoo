@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Mintea (y cachea) un access token de GCP desde las credenciales ADC locales.
+# El secreto nunca sale de este script: solo se imprime el access token.
+set -euo pipefail
+
+CACHE="$HOME/.cache/adhoc/gcp-token"
+mkdir -p "$(dirname "$CACHE")" && chmod 700 "$(dirname "$CACHE")"
+TTL=3000   # 50 min; el token de Google dura ~3600s
+
+if [[ -s "$CACHE" ]]; then
+  age=$(( $(date +%s) - $(stat -c %Y "$CACHE") ))
+  if (( age < TTL )); then cat "$CACHE"; exit 0; fi
+fi
+
+mint() {
+  local f=$1
+  [[ -s "$f" ]] || return 1
+  curl -s --max-time 20 -X POST https://oauth2.googleapis.com/token \
+    -d "client_id=$(jq -r .client_id "$f")" \
+    -d "client_secret=$(jq -r .client_secret "$f")" \
+    -d "refresh_token=$(jq -r .refresh_token "$f")" \
+    -d "grant_type=refresh_token" \
+  | jq -er '.access_token // empty'
+}
+
+for cred in "$HOME/.config/gcloud/application_default_credentials.json" \
+            "$HOME/gcloud_legacy_credentials/adc.json"; do
+  if tok=$(mint "$cred" 2>/dev/null) && [[ -n "$tok" ]]; then
+    umask 077; printf '%s' "$tok" > "$CACHE"
+    printf '%s' "$tok"; exit 0
+  fi
+done
+
+# Dos fallas distintas y con salidas distintas: sin credencial montada no hay nada
+# que reintentar, y decir "rapt_required" ahi manda a la persona al lado equivocado.
+if [[ ! -s "$HOME/.config/gcloud/application_default_credentials.json" \
+   && ! -s "$HOME/gcloud_legacy_credentials/adc.json" ]]; then
+  echo "gcp-token: no hay credenciales de GCP montadas en este devcontainer." >&2
+  echo "  Si necesitas acceso a GCP desde aca, agrega a tu bashrc del host:" >&2
+  echo "      export R2_ENABLE_DEVOPS=1" >&2
+  echo "  y rebuildea el devcontainer." >&2
+  exit 1
+fi
+
+echo "gcp-token: hay credenciales pero ninguna sirvio para mintear." >&2
+echo "  Probablemente rapt_required -> hace falta 'gcloud auth login' interactivo." >&2
+exit 1

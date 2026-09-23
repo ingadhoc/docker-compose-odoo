@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# kubectl con el token de GCP inyectado (bypassea gke-gcloud-auth-plugin,
+# que no puede escribir en ~/.config/gcloud porque es read-only mount).
+set -euo pipefail
+exec kubectl --token="$(gcp-token)" --request-timeout=45s "$@"

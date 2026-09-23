@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# GET a una API REST de Google con el bearer token. Uso:
+#   gcp-api <url> [--data-urlencode 'k=v' ...]
+set -euo pipefail
+url=$1; shift
+exec curl -sS --max-time 60 -G -H "Authorization: Bearer $(gcp-token)" "$url" "$@"

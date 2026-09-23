@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# gcloud con token via env (no aparece en argv) y CLOUDSDK_CONFIG escribible.
+set -euo pipefail
+export CLOUDSDK_CONFIG="$HOME/.cache/adhoc/gcloud"
+mkdir -p "$CLOUDSDK_CONFIG"
+export CLOUDSDK_AUTH_ACCESS_TOKEN="$(gcp-token)"
+export CLOUDSDK_CORE_PROJECT="${CLOUDSDK_CORE_PROJECT:-nubeadhoc}"
+exec gcloud "$@"
