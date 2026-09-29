@@ -4,7 +4,7 @@ devcointainer focoused on easing development
 
 ## Odoo Docker Adhoc
 
-You can find documentation [here](https://docs.google.com/document/d/1nuX99v_ncfEfXlAAYVe85k9a1JbkXBVG_39GK5GGWzg/preview)
+Documentation is in the internal wiki: [Devcontainer local](https://wiki.adhoc.inc/devops/herramientas-de-desarrollo/devcontainer-local).
 
 ## Context
 
