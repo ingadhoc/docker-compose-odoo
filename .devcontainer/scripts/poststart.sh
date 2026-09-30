@@ -125,6 +125,11 @@ MAPHEAD
             for name in $(echo "${!projects[@]}" | tr ' ' '\n' | sort); do
                 path="${projects[$name]}"
                 echo "- **$name**: \`$path/\` — ver \`$path/AGENTS.md\`."
+                # Nested clones with their own AGENTS.md (worktrees have a .git file, not a dir)
+                for sub in "$path"/*/; do
+                    [[ -f "$sub/AGENTS.md" && -d "$sub/.git" ]] || continue
+                    echo "  - \`${sub%/}/\` — ver \`${sub%/}/AGENTS.md\`."
+                done
             done
         fi
         cat <<'MAPOTHERS'
