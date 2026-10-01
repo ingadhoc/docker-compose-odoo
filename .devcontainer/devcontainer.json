@@ -28,6 +28,7 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": "/scripts/poststart.sh > /tmp/postCreateCommand.log 2>&1",
   "postStartCommand": {
+    "claude-json": "/scripts/sync-claude-json.sh",
     // El gitconfig copiado del host puede traer un core.hooksPath que acá no
     // existe, y con eso git no corre ningún hook. Va en postStart, no en
     // postCreate, para que los containers ya creados lo reciban sin rebuild.
@@ -39,7 +40,8 @@
     // ejecutarse. Sin esa pausa el watchdog nunca arranca. Ver doc/memoria.md.
     "ls-watchdog": "setsid nohup /scripts/ls-watchdog.sh </dev/null >/dev/null 2>&1 & sleep 2"
   },
-  "onCreateCommand": "/scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
+  // ~/.claude.json goes in before the extension starts; postStart refreshes it on restarts.
+  "onCreateCommand": "/scripts/sync-claude-json.sh; /scripts/oncreate.sh > /tmp/onCreateCommand.log 2>&1",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/scripts/user",
     "AD_DEV_MODE": "NORMAL",
