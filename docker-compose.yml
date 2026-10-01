@@ -30,7 +30,9 @@ services:
       - ./.devcontainer/auth/.claude:/home/odoo/.claude
       - ./.devcontainer/auth/.codex:/home/odoo/.codex
       - ./.devcontainer/auth/.gemini:/home/odoo/.gemini
-      - ./.devcontainer/auth/.claude.json:/home/odoo/.claude.json
+      # Not bound as ~/.claude.json: Claude replaces it by rename, which strands a file bind.
+      # sync-claude-json.sh copies it into place; the container's own writes there do not reach this file.
+      - ./.devcontainer/auth/.claude.json:/home/odoo/.claude.host.json:ro
       - ./.devcontainer/auth/.agents:/home/odoo/.agents
       - ./.devcontainer/auth/.config/gh:/home/odoo/.config/gh
       # Capa Usuario adhoc-way — user.md + teams + conventions.md compartidos
