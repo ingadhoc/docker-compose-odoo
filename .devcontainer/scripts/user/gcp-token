@@ -36,9 +36,13 @@ done
 if [[ ! -s "$HOME/.config/gcloud/application_default_credentials.json" \
    && ! -s "$HOME/gcloud_legacy_credentials/adc.json" ]]; then
   echo "gcp-token: no hay credenciales de GCP montadas en este devcontainer." >&2
-  echo "  Si necesitas acceso a GCP desde aca, agrega a tu bashrc del host:" >&2
-  echo "      export R2_ENABLE_DEVOPS=1" >&2
-  echo "  y rebuildea el devcontainer." >&2
+  echo "  - Si sos de DevOps: agrega a tu bashrc del host" >&2
+  echo "        export R2_ENABLE_DEVOPS=1" >&2
+  echo "    y rebuildea el devcontainer." >&2
+  echo "  - Si sos developer: no actives ese flag, monta tu credencial de GCP" >&2
+  echo "    adentro del container. Para logs de instancias Odoo usa el connector" >&2
+  echo "    GCP de Tuqui, que no necesita credenciales locales. Si te hace falta" >&2
+  echo "    otro acceso a GCP, pediselo a DevOps." >&2
   exit 1
 fi
 
