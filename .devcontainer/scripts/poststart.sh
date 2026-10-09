@@ -1047,32 +1047,6 @@ else
     echo "Claude Code settings.json ya existe — respeto config propia ($CLAUDE_SETTINGS)"
 fi
 
-# Aviso de baja: gcp-credentials entra al catálogo de mounts con sólo tener gcloud
-# con una cuenta activa en el host, sin mirar R2_ENABLE_DEVOPS como sí hacen ~/.kube,
-# ~/.config/gcloud y ~/.docker. Sale sólo en las máquinas donde el mount existe sin
-# el flag, así que no le habla a quien no le toca.
-if [[ "${R2_ENABLE_DEVOPS:-0}" != "1" && -d "$HOME/gcloud_legacy_credentials" ]]; then
-    cat >&2 <<'AVISO'
-=====================================================================
-AVISO — tu credencial de GCP se está montando sin que la hayas pedido
-=====================================================================
-El devcontainer monta ~/gcloud_legacy_credentials (el refresh token de
-tu cuenta de gcloud) aunque no tengas R2_ENABLE_DEVOPS=1. No era la
-intención: los otros mounts de credenciales sí respetan ese flag.
-
-A partir del 2026-10-07 deja de montarse.
-
-- Si no la usás, no tenés que hacer nada.
-- Si la necesitás, agregá a tu bashrc del host:
-      export R2_ENABLE_DEVOPS=1
-- Para logs de instancias Odoo el camino es el connector GCP en Tuqui,
-  que no necesita credenciales locales.
-
-Si esto te rompe algo, decilo antes del 2026-10-07.
-=====================================================================
-AVISO
-fi
-
 if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
     # kubectl
     if ! command -v kubectl &>/dev/null; then
