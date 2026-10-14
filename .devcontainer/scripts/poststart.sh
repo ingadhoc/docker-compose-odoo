@@ -26,6 +26,7 @@ rm -f  "$HOME/custom/skills-lock.json"
 # desde el adc.json montado, y ya no la declara ningún skills-lock.json, así que se
 # borra y no se reinstala. No es una poda general: es esta skill, por nombre.
 rm -rf "$HOME/.agents/skills/gcp-logs" "$HOME/.claude/skills/gcp-logs" "$HOME/.codex/skills/gcp-logs"
+rm -f  "$HOME/custom/GEMINI.md"                                            # pointer de gemini-cli (ver build_workspace)
 
 # Overlay src/ dentro de custom/ — symlinks a repos baked de la imagen.
 # Los symlinks apuntan a paths internos del container; son válidos solo adentro.
@@ -226,14 +227,11 @@ contesta acá mismo y cuándo hay que ir a leer el `AGENTS.md` de otro proyecto
 montado. No adelantes otras lecturas: el ruteo dice qué hace falta según el
 pedido.
 EOF
-    cat > "$CUSTOM/GEMINI.md" <<'EOF'
-# GEMINI.md
-**Antes de responder el primer mensaje de esta sesión, leé
-[`AGENTS.md`](./AGENTS.md)** — es la fuente canónica de instrucciones de este
-workspace, y trae el ruteo por tema: cuándo el pedido se contesta acá mismo y
-cuándo hay que ir a leer el `AGENTS.md` de otro proyecto montado. No adelantes
-otras lecturas: el ruteo dice qué hace falta según el pedido.
-EOF
+    # Sin pointer equivalente para Antigravity CLI (`agy`, que reemplazó a
+    # gemini-cli): lee AGENTS.md nativo en su discovery jerárquico — sus docs
+    # listan `GEMINI.md`, `AGENTS.md` y `.agents/rules/*.md` como "Directory &
+    # Project Rules" — así que el archivo puente sobraba. El GEMINI.md que
+    # generaban versiones anteriores se borra arriba, en la limpieza.
 
     echo "Overlay construido: custom/src/ ($src_count repos directos, $repo_count en repositories/)"
 }
@@ -309,7 +307,7 @@ echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
 # Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev, sacar este bloque.
 export npm_config_prefix="$HOME/.local"
 
-# Node 20+ — requerido por OpenCode v1.14+, Gemini CLI y claude-code v2.
+# Node 20+ — requerido por OpenCode v1.14+ y claude-code v2.
 # User-local (N_PREFIX) para no requerir sudo, consistente con el patrón del bloque.
 # Transitorio pre-bake OCI: cuando la imagen dev traiga Node 20, sacar este bloque.
 export N_PREFIX="$HOME/.local"
@@ -348,7 +346,17 @@ install_cli_if_missing() {
 }
 install_cli_if_missing claude @anthropic-ai/claude-code
 install_cli_if_missing codex @openai/codex
-install_cli_if_missing gemini @google/gemini-cli
+# Antigravity CLI (`agy`) — reemplaza a gemini-cli, que ya no se instala.
+# No va por npm: es un binario nativo que la imagen dev ya trae bakeado en
+# /usr/local/bin/agy. Acá solo se verifica; si algún día faltara, el installer
+# oficial es `curl -fsSL https://antigravity.google/cli/install.sh | bash`
+# (deja ~/.local/bin/agy, ~210 MB, y no persiste entre rebuilds).
+if command -v agy &>/dev/null; then
+    echo "agy ya presente ($(command -v agy), $(agy --version 2>/dev/null || echo '?'))."
+else
+    echo "AVISO: agy (Antigravity CLI) no está en la imagen ni en el PATH."
+    echo "       Instalar con: curl -fsSL https://antigravity.google/cli/install.sh | bash"
+fi
 # OpenCode (sst/opencode) — runtime CLI alternativo a Claude Code y Codex.
 # Se mantiene en el devcontainer para que el dev pueda elegir agente.
 # Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
