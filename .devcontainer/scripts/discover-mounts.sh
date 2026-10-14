@@ -138,11 +138,33 @@ for entry in "${PROJECTS[@]}"; do
 done
 
 # Mounts devops — solo si R2_ENABLE_DEVOPS=1 en el host.
-# Agrega ~/.kube, ~/.config/gcloud y el socket de Docker al servicio odoo.
+# Agrega ~/.kube, la config de gcloud y el socket de Docker al servicio odoo.
+# TODOS read-only: nada de lo que pase adentro del container puede modificarle
+# el estado de GCP/K8s al dev.
+#
+# gcloud NO se montea en su path canónico (`~/.config/gcloud`) sino en
+# `~/.gcloud-host`, y el poststart copia de ahí al canónico (que queda como dir
+# real y writable adentro). Motivo: renovar la sesión de gcloud es una operación
+# de ESCRITURA, y con el dir read-only el container quedaba atado al último token
+# que hubiera cacheado el host:
+#
+#   ERROR: (gcloud.auth.print-access-token) Unable to create private file
+#   [~/.config/gcloud/credentials.db]: [Errno 30] Read-only file system
+#
+# Montar `:rw` solo los archivos del token no alcanza (sqlite escribe su journal
+# al lado del .db, o sea necesita el dir writable; y gcloud escribe `logs/` en
+# cada invocación), y montar el dir entero `:rw` habilita bastante más que el
+# refresh — un `gcloud auth revoke` adentro le mata la sesión al dev. El detalle
+# del racional y de la copia está en `scripts/user/gcloud-sync.sh`.
+#
+# `.kube` sí se queda en su path canónico y read-only: el gke-gcloud-auth-plugin
+# mintea igual sin poder escribir su cache (verificado), solo paga una llamada a
+# gcloud por invocación de kubectl. `.docker` idem — ahí solo se escribe en
+# `docker login`.
 devops_mounts=()
 if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
     [[ -d "${HOME}/.kube" ]]           && devops_mounts+=("${HOME}/.kube:/home/odoo/.kube:ro")
-    [[ -d "${HOME}/.config/gcloud" ]]  && devops_mounts+=("${HOME}/.config/gcloud:/home/odoo/.config/gcloud:ro")
+    [[ -d "${HOME}/.config/gcloud" ]]  && devops_mounts+=("${HOME}/.config/gcloud:/home/odoo/.gcloud-host:ro")
     [[ -d "${HOME}/.docker" ]]         && devops_mounts+=("${HOME}/.docker:/home/odoo/.docker:ro")
     [[ -S /var/run/docker.sock ]]      && devops_mounts+=("/var/run/docker.sock:/var/run/docker.sock")
     echo "discover-mounts: R2_ENABLE_DEVOPS=1 — ${#devops_mounts[@]} mount(s) devops." >&2

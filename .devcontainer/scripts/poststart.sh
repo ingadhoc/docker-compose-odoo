@@ -1123,6 +1123,12 @@ if [[ "${R2_ENABLE_DEVOPS:-0}" == "1" ]]; then
     else
         echo "gcloud ya presente ($(gcloud version --format='value("Google Cloud SDK")' 2>/dev/null))."
     fi
+
+    # Config del host → copia writable en el path canónico. Va afuera del if:
+    # gcloud viene bakeado en la imagen, así que el camino normal es el `else`.
+    # El mount del host es read-only y gcloud necesita escribir para renovar la
+    # sesión; el racional completo está en el script.
+    /scripts/user/gcloud-sync.sh || true
 fi
 
 if [[ "${AD_DEV_MODE:-}" == "MASTER" ]]; then
