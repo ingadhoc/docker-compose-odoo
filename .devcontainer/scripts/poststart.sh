@@ -443,10 +443,25 @@ ensure_github_https_fallback() {
     fi
     if [ -n "$(git config --global --get-all url."https://github.com/".insteadOf 2>/dev/null)" ]; then
         echo "git: insteadOf hacia GitHub ya declarado; no lo piso."
+    else
+        git config --global --add url."https://github.com/".insteadOf "git@github.com:"
+        # npm resolves github URLs as ssh://git@github.com/...
+        git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+        echo "git: SSH a GitHub no autentica; remotes git@github.com: y ssh://git@github.com/ reescritos a HTTPS."
+    fi
+    ensure_github_credential_helper
+}
+
+# Without VS Code (devcontainer CLI) nothing injects a credential helper for HTTPS.
+ensure_github_credential_helper() {
+    if git config --global --get-urlmatch credential.helper https://github.com >/dev/null 2>&1; then
         return 0
     fi
-    git config --global url."https://github.com/".insteadOf "git@github.com:"
-    echo "git: SSH a GitHub no autentica; remotes git@github.com: reescritos a HTTPS."
+    if gh auth status --hostname github.com >/dev/null 2>&1 && gh auth setup-git --hostname github.com; then
+        echo "git: sin credential helper para GitHub; uso el de gh."
+    else
+        echo "WARN: sin credential helper para GitHub ni sesión de gh; los remotes HTTPS van a fallar."
+    fi
 }
 ensure_github_https_fallback
 
@@ -730,7 +745,7 @@ collect_declared_skills() {
 validate_ingadhoc_skills() {
     local dir out rc=0 missing
     dir=$(mktemp -d)
-    if ! git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$dir" 2>/dev/null; then
+    if ! GIT_TERMINAL_PROMPT=0 git clone --quiet --depth=1 git@github.com:ingadhoc/skills.git "$dir" 2>/dev/null; then
         echo "WARN: no pude clonar ingadhoc/skills para validar la lista — sigo sin validación."
         rm -rf "$dir"
         return 0
