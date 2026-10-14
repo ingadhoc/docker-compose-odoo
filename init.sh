@@ -63,6 +63,10 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         if ! grep -qE "^ODOO_MINOR=${ODOO_V}\." "$SCRIPT_DIR/.env"; then
             sed_inplace "s/^ODOO_MINOR=.*/ODOO_MINOR=$ODOO_V.0.dev/" "$SCRIPT_DIR/.env"
         fi
+        # Container name shown by VS Code: "OBA 18", "OBA 19", "OBA Master".
+        DEVCONTAINER_NAME="OBA $ODOO_V"
+        [[ "$ODOO_V" == "master" ]] && DEVCONTAINER_NAME="OBA Master"
+        sed_inplace "s/^  \"name\": .*/  \"name\": \"$DEVCONTAINER_NAME\",/" "$SCRIPT_DIR/.devcontainer/devcontainer.json"
 
         if [[ -n "$SKIP_CTX_PG" ]]; then
             echo "SKIP_CTX_PG set, leaving ODOO_PGHOST untouched"
