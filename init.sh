@@ -96,11 +96,11 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
         perl -0777 -i -pe 's/"editor.codeActionsOnSave":\s*\{.*?\},/"editor.codeActionsOnSave": {"source.fixAll": "never", "source.organizeImports": "never"},/sg' "$SCRIPT_DIR/.devcontainer/devcontainer.json"
     fi
 
-    # Transition to Odoo 20
+    # Odoo 20 loads the baked repos again (the modules not yet migrated are
+    # already non-installable there): undo what the transition left in .env.
     if [[ "$ODOO_V" == "20" ]]; then
-        echo "Transitioning to Odoo 20"
-        sed_inplace "s/^IGNORE_SRC_REPOSITORIES=.*/IGNORE_SRC_REPOSITORIES=True/" "$SCRIPT_DIR/.env"
-        sed_inplace "s/^SERVER_WIDE_MODULES=.*/SERVER_WIDE_MODULES=/" "$SCRIPT_DIR/.env"
+        sed_inplace "s/^IGNORE_SRC_REPOSITORIES=True$/IGNORE_SRC_REPOSITORIES=/" "$SCRIPT_DIR/.env"
+        sed_inplace "s/^SERVER_WIDE_MODULES=$/SERVER_WIDE_MODULES=base,web,server_mode,saas_client/" "$SCRIPT_DIR/.env"
     fi
 
     echo "Pull latest image"
