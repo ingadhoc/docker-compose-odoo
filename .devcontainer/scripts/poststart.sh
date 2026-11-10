@@ -302,65 +302,48 @@ chmod +x "$WORKSPACE_RM"
 
 echo "workspace-add y workspace-rm disponibles en $HOME/.local/bin/"
 
-# CLIs de agentes IA — idempotente (solo instala si no están presentes)
-# Usa ~/.local para evitar permisos de root en /usr/local/lib/node_modules.
-# Transitorio pre-bake: cuando oci-odoo-by-adhoc los incluya en la imagen dev, sacar este bloque.
+# Node y CLIs de agentes IA en ~/.local, que va antes que /usr/bin en el PATH:
+# la imagen dev ya no los trae, y si los trae una imagen vieja, mandan estos,
+# que se instalan en su última versión en cada postCreate.
 export npm_config_prefix="$HOME/.local"
-
-# Node 20+ — requerido por OpenCode v1.14+ y claude-code v2.
-# User-local (N_PREFIX) para no requerir sudo, consistente con el patrón del bloque.
-# Transitorio pre-bake OCI: cuando la imagen dev traiga Node 20, sacar este bloque.
 export N_PREFIX="$HOME/.local"
-if ! command -v n &>/dev/null; then
-    echo "Instalando n (manager de Node)..."
-    npm install -g n --quiet && echo "n instalado." || echo "FALLO: no se pudo instalar n"
-fi
-if command -v n &>/dev/null; then
-    n 20 >/dev/null && echo "Node $(node -v) activo." || echo "FALLO: no se pudo activar Node 20"
+mkdir -p "$HOME/.local/bin"
+
+# Node 24 con n, bajado por curl: no depende de que la imagen traiga npm.
+echo "Instalando n y Node 24..."
+if curl -fsSL --retry 3 -o "$HOME/.local/bin/n" https://raw.githubusercontent.com/tj/n/master/bin/n \
+    && chmod +x "$HOME/.local/bin/n" \
+    && n 24 >/dev/null; then
     hash -r
+    echo "Node $(node -v) activo ($(command -v node))."
+else
+    echo "FALLO: no se pudo instalar Node 24 con n"
 fi
 
-install_cli_if_missing() {
-    # Uso: install_cli_if_missing <cmd> <pkg> [--upgrade]
-    #
-    # Por default: solo instala si el binario falta (`command -v` falla). Si
-    # ya está (típicamente porque el bake OCI lo trajo), no toca nada.
-    #
-    # `--upgrade`: corre `npm install -g` siempre, esté o no el binario.
-    # Esto deja que npm decida — para git URLs sin ref consulta el SHA del
-    # default branch y reusa cache si coincide (cache hit ~1-2s), o
-    # re-instala si hay commits nuevos. Útil para paquetes que iteran
-    # rápido y donde el dev no rebuildea la imagen seguido.
-    local cmd="$1" pkg="$2" mode="${3:-skip-if-present}"
-    if [ "$mode" = "--upgrade" ]; then
-        echo "Instalando/actualizando $cmd ($pkg)..."
-        npm install -g "$pkg" --quiet \
-            && echo "$cmd OK ($(command -v "$cmd"), $($cmd --version 2>/dev/null || echo '?'))." \
-            || echo "FALLO: no se pudo instalar/actualizar $pkg"
-    elif ! command -v "$cmd" &>/dev/null; then
-        echo "Instalando $cmd ($pkg)..."
-        npm install -g "$pkg" --quiet && echo "$cmd instalado." || echo "FALLO: no se pudo instalar $pkg"
-    else
-        echo "$cmd ya presente ($(command -v "$cmd"))."
-    fi
+install_cli() {
+    # Uso: install_cli <cmd> <pkg>. Instala o actualiza siempre, en ~/.local.
+    local cmd="$1" pkg="$2"
+    echo "Instalando/actualizando $cmd ($pkg)..."
+    npm install -g "$pkg" --quiet \
+        && echo "$cmd OK ($(command -v "$cmd"), $($cmd --version 2>/dev/null || echo '?'))." \
+        || echo "FALLO: no se pudo instalar/actualizar $pkg"
 }
-install_cli_if_missing claude @anthropic-ai/claude-code
-install_cli_if_missing codex @openai/codex
-# Antigravity CLI (`agy`) — reemplaza a gemini-cli, que ya no se instala.
-# No va por npm: es un binario nativo que la imagen dev ya trae bakeado en
-# /usr/local/bin/agy. Acá solo se verifica; si algún día faltara, el installer
-# oficial es `curl -fsSL https://antigravity.google/cli/install.sh | bash`
-# (deja ~/.local/bin/agy, ~210 MB, y no persiste entre rebuilds).
-if command -v agy &>/dev/null; then
-    echo "agy ya presente ($(command -v agy), $(agy --version 2>/dev/null || echo '?'))."
+install_cli claude @anthropic-ai/claude-code
+install_cli codex @openai/codex
+install_cli opencode opencode-ai
+
+# Antigravity CLI (`agy`) — binario nativo, no está en npm. El installer puede
+# salir 0 aunque falle la descarga: el éxito se verifica por el binario.
+echo "Instalando/actualizando agy (Antigravity CLI)..."
+rm -f "$HOME/.local/bin/agy"
+curl -fsSL --retry 3 -o /tmp/agy-install.sh https://antigravity.google/cli/install.sh \
+    && bash /tmp/agy-install.sh --dir "$HOME/.local/bin" >/dev/null
+rm -f /tmp/agy-install.sh
+if [ -x "$HOME/.local/bin/agy" ]; then
+    echo "agy OK ($HOME/.local/bin/agy, $(agy --version 2>/dev/null || echo '?'))."
 else
-    echo "AVISO: agy (Antigravity CLI) no está en la imagen ni en el PATH."
-    echo "       Instalar con: curl -fsSL https://antigravity.google/cli/install.sh | bash"
+    echo "FALLO: no se pudo instalar agy. A mano: curl -fsSL https://antigravity.google/cli/install.sh | bash"
 fi
-# OpenCode (sst/opencode) — runtime CLI alternativo a Claude Code y Codex.
-# Se mantiene en el devcontainer para que el dev pueda elegir agente.
-# Transitorio pre-bake OCI: cuando se baje al bake de la imagen dev, sacar de acá.
-install_cli_if_missing opencode opencode-ai
 
 # Sandbox de codex — shim al backend Landlock cuando bubblewrap no puede.
 #
@@ -428,6 +411,19 @@ SHIM
     echo "codex: bwrap no puede crear namespaces, shim de Landlock instalado en $CODEX_SHIM."
 }
 ensure_codex_landlock_shim
+
+# gh CLI — binario directo, no está en npm. Va siempre a ~/.local, en su última versión.
+echo "Instalando/actualizando gh CLI..."
+GH_VERSION=$(curl -sf https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | sed 's/v//')
+if [ -n "$GH_VERSION" ]; then
+    curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+        | tar xz -C /tmp && \
+        mv "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HOME/.local/bin/" && \
+        echo "gh $GH_VERSION instalado." || echo "FALLO: no se pudo instalar gh"
+else
+    echo "FALLO: no se pudo obtener la versión de gh desde GitHub API"
+fi
+
 # Auth de git hacia GitHub — fallback a HTTPS cuando no hay clave SSH.
 #
 # VS Code copia el `~/.gitconfig` del host al crear el container (no lo
@@ -536,22 +532,6 @@ install_adhoc_way() {
     fi
 }
 install_adhoc_way
-
-# gh CLI — binario directo (no está en npm). Transitorio pre-bake.
-if ! command -v gh &>/dev/null; then
-    echo "Instalando gh CLI..."
-    GH_VERSION=$(curl -sf https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | sed 's/v//')
-    if [ -n "$GH_VERSION" ]; then
-        curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
-            | tar xz -C /tmp && \
-            mv "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HOME/.local/bin/" && \
-            echo "gh $GH_VERSION instalado." || echo "FALLO: no se pudo instalar gh"
-    else
-        echo "FALLO: no se pudo obtener la versión de gh desde GitHub API"
-    fi
-else
-    echo "gh ya presente ($(command -v gh))."
-fi
 
 if command -v gh &>/dev/null; then
     gh auth status &>/dev/null 2>&1 && echo "gh: autenticado OK." || echo "gh: no autenticado."
